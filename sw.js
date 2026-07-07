@@ -3,7 +3,7 @@
    Incrémenter CACHE_VERSION à chaque mise à jour du fichier index.html
    pour que les utilisateurs reçoivent la nouvelle version. */
 
-const CACHE_VERSION = "bilanforme-v1";
+const CACHE_VERSION = "bilanforme-v2";
 const APP_FILES = [
   "./",
   "./index.html",
