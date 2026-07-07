@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Mon bilan forme — suivi quotidien & corrélations</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#347562">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+  :root{
+    --bg:#F6F4EF; --surface:#FFFFFF; --ink:#26332C; --muted:#75817A;
+    --border:#E7E4DB; --pine:#347562; --pine-deep:#255A4B; --pine-soft:#E4F0EB;
+    --blush:#C9647B; --blush-soft:#F9E9ED; --ochre:#C99B4F; --ochre-soft:#F7EEDD;
+    --slate:#5B7A9D; --slate-soft:#E8EEF5;
+    --shadow:0 2px 12px rgba(38,51,44,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Avenir Next','Segoe UI',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  header{padding:20px 18px 12px;max-width:640px;margin:0 auto}
+  .brand{font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;letter-spacing:-.4px}
+  .brand em{font-style:normal;color:var(--pine)}
+  .sub{font-size:13px;color:var(--muted);margin-top:3px}
+  main{max-width:640px;margin:0 auto;padding:0 18px 104px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow);animation:pop .25s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .card{animation:none} *{transition:none!important} }
+  .stitle{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:20px 4px 8px}
+  .row{display:flex;align-items:center;gap:8px}
+  .grow{flex:1}
+  button{font-family:inherit;cursor:pointer}
+  .navbtn{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:var(--surface);font-size:16px;color:var(--ink);box-shadow:var(--shadow)}
+  .navbtn:disabled{opacity:.35;cursor:default}
+  .scale{display:flex;gap:4px;flex-wrap:wrap}
+  .scale button{width:30px;height:38px;border-radius:10px;border:1px solid var(--border);background:#FBFAF7;font-size:14px;padding:0;color:var(--ink);transition:all .12s}
+  .scale button.on{background:var(--pine);border-color:var(--pine);color:#fff;font-weight:700;transform:translateY(-2px)}
+  .emoji5{display:flex;gap:6px}
+  .emoji5 button{flex:1;height:56px;border-radius:14px;border:1px solid var(--border);background:#FBFAF7;font-size:26px;padding:0;filter:grayscale(1);opacity:.55;transition:all .15s}
+  .emoji5 button.on{background:var(--pine-soft);border-color:var(--pine);filter:none;opacity:1;transform:scale(1.08)}
+  .emojilabel{text-align:center;font-size:12px;color:var(--pine);font-weight:700;margin-top:8px;min-height:15px}
+  .flow{display:flex;gap:6px}
+  .flow button{flex:1;padding:9px 4px;border-radius:14px;border:1px solid var(--border);background:#FBFAF7;font-size:12px;color:var(--ink);transition:all .15s}
+  .flow button .fi{display:block;font-size:17px;margin-bottom:2px}
+  .flow button.on{background:var(--blush-soft);border-color:var(--blush);color:var(--blush);font-weight:700;transform:scale(1.04)}
+  .stepper button{width:44px;height:44px;border-radius:13px;border:1px solid var(--border);background:#FBFAF7;font-size:20px;color:var(--ink)}
+  .stepval{min-width:80px;text-align:center;font-size:21px;font-weight:700}
+  .stepval small{font-size:12px;font-weight:400;color:var(--muted)}
+  .boolgrp{display:flex;gap:8px}
+  .boolgrp button{flex:1;height:42px;border-radius:13px;border:1px solid var(--border);background:#FBFAF7;font-size:14px;color:var(--ink);transition:all .12s}
+  .boolgrp button.on{background:var(--pine);border-color:var(--pine);color:#fff;font-weight:700}
+  .boolgrp button.on.rose{background:var(--blush);border-color:var(--blush)}
+  .chip{padding:8px 14px;border-radius:999px;font-size:13px;border:1px solid var(--border);background:#FBFAF7;color:var(--ink);transition:all .12s}
+  .chip.on{background:var(--blush-soft);border-color:var(--blush);color:var(--blush);font-weight:700}
+  .chip.pine.on{background:var(--pine-soft);border-color:var(--pine);color:var(--pine)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .flabel{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline}
+  .flabel small{color:var(--muted);font-weight:400;font-size:12px}
+  textarea,input[type=text]{width:100%;border:1px solid var(--border);border-radius:13px;padding:10px;font-size:14px;font-family:inherit;background:#FBFAF7;color:var(--ink)}
+  textarea{min-height:60px;resize:vertical}
+  select{border:1px solid var(--border);border-radius:11px;padding:9px 8px;font-size:13px;background:#FBFAF7;font-family:inherit;color:var(--ink)}
+  .primary{width:100%;height:54px;border-radius:17px;border:none;background:linear-gradient(135deg,var(--pine) 0%,var(--pine-deep) 100%);color:#fff;font-size:16px;font-weight:700;box-shadow:0 6px 18px rgba(52,117,98,.3);transition:all .25s}
+  .primary.saved{background:linear-gradient(135deg,#43917b,#347562)}
+  .primary:active{transform:scale(.985)}
+  .ghostbtn{width:100%;padding:12px;border-radius:13px;border:1px solid var(--border);background:#FBFAF7;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:10px}
+  .dangerbtn{width:100%;padding:12px;border-radius:13px;border:1px solid rgba(201,100,123,.25);background:var(--blush-soft);color:var(--blush);font-size:14px;font-weight:600}
+  nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-top:1px solid var(--border);display:flex;justify-content:center;z-index:10}
+  nav .inner{display:flex;max-width:640px;width:100%;padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+  nav button{flex:1;padding:8px 0;border:none;background:none;color:var(--muted);font-size:11.5px;border-radius:14px;margin:0 2px;transition:all .15s}
+  nav button.on{color:var(--pine);font-weight:700;background:var(--pine-soft)}
+  nav button .ic{font-size:19px;margin-bottom:2px;display:block}
+  .entrybtn{width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;font-family:inherit;color:var(--ink);box-shadow:var(--shadow)}
+  .constat{border-left:4px solid var(--pine)}
+  .constat.neg{border-left-color:var(--blush)}
+  .cor-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+  .cor-chip{display:inline-flex;align-items:center;gap:6px;background:#FBFAF7;border:1px solid var(--border);border-radius:12px;padding:7px 11px;font-size:13px;font-weight:600}
+  .cor-chip .dir{font-size:12px;font-weight:800}
+  .cor-link{display:flex;flex-direction:column;align-items:center;line-height:1;color:var(--muted)}
+  .cor-link small{font-size:9px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:2px}
+  .cor-meter{height:5px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:9px}
+  .cyc-area{display:flex;align-items:flex-end;gap:6px;height:132px;position:relative}
+  .cyc-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;z-index:2}
+  .cyc-val{font-size:12px;font-weight:800;margin-bottom:3px}
+  .cyc-bar{width:100%;max-width:36px;border-radius:8px 8px 3px 3px}
+  .cyc-labels{display:flex;gap:6px;margin-top:5px}
+  .cyc-labels div{flex:1;text-align:center;font-size:10.5px;color:var(--muted)}
+  .cyc-mean{position:absolute;left:0;right:0;border-top:2px dashed var(--pine);z-index:1}
+  .cyc-mean span{position:absolute;right:0;top:-17px;font-size:10px;color:var(--pine);font-weight:800;background:rgba(255,255,255,.85);padding:1px 4px;border-radius:5px}
+  .cicon{width:44px;height:44px;border-radius:13px;background:#FBFAF7;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:23px;flex:none}
+  .crel{font-size:19px;color:var(--muted);font-weight:700;display:flex;flex-direction:column;align-items:center;line-height:1;flex:none}
+  .crel small{font-size:9px;font-weight:800;letter-spacing:.5px;margin-top:2px}
+  .cstrength{height:7px;background:var(--border);border-radius:99px;overflow:hidden;flex:1}
+  .lagchip{margin-left:auto;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--slate-soft);color:var(--slate);white-space:nowrap;flex:none}
+  .cyclebars{display:flex;align-items:flex-end;gap:8px}
+  .cb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+  .cbv{font-size:14px;font-weight:800;margin-bottom:4px}
+  .cbbar{width:100%;max-width:46px;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#D07E92,#C9647B)}
+  .cyclemonths{display:flex;gap:8px}
+  .cbm{flex:1;text-align:center;font-size:10.5px;color:var(--muted);text-transform:capitalize;margin-top:6px}
+  .cbmean{position:absolute;left:0;right:0;border-top:2px dashed var(--pine);z-index:1;pointer-events:none}
+  .cbmean span{position:absolute;right:0;top:-17px;font-size:10.5px;color:var(--pine);font-weight:700;background:var(--surface);padding:0 4px;border-radius:4px}
+  .meta{font-size:12px;color:var(--muted);margin-top:6px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th{padding:6px 4px;font-weight:700}
+  td{padding:7px 4px;border-top:1px solid var(--border)}
+  .bar{height:6px;background:var(--border);border-radius:99px;overflow:hidden}
+  .bar > div{height:100%;border-radius:99px}
+  .toggle{width:46px;height:26px;border-radius:99px;border:none;position:relative;background:var(--border);transition:background .2s;flex:none}
+  .toggle.on{background:var(--pine)}
+  .toggle span{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .toggle.on span{left:23px}
+  .settingrow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;gap:10px}
+  .symtag{display:inline-flex;align-items:center;gap:6px;background:var(--blush-soft);color:var(--blush);border-radius:999px;padding:6px 8px 6px 12px;font-size:13px;font-weight:600}
+  .symtag button{border:none;background:none;color:var(--blush);font-size:14px;padding:0}
+  .disclaimer{font-size:12.5px;line-height:1.6;color:#83672f;background:var(--ochre-soft);border:1px solid rgba(201,155,79,.3)}
+  .welcome{background:linear-gradient(135deg,var(--pine-soft),#F0F6F0);border-color:rgba(52,117,98,.25)}
+  .predict{background:linear-gradient(135deg,var(--blush-soft) 0%,#FBF3F0 100%);border-color:rgba(201,100,123,.2)}
+  .center{text-align:center}
+  .footer-note{font-size:12px;color:var(--muted);text-align:center;padding:8px 20px;line-height:1.6}
+  /* calendrier */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal .dow{text-align:center;font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;padding:4px 0}
+  .cal .day{aspect-ratio:1;border-radius:12px;border:1px solid transparent;background:none;position:relative;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12.5px;color:var(--ink);padding:0}
+  .cal .day.other{opacity:.28}
+  .cal .day.hasdata{background:#FBFAF7;border-color:var(--border)}
+  .cal .day.today{border:2px solid var(--pine);font-weight:700}
+  .cal .day.predicted{border:1.5px dashed var(--blush)}
+  .cal .day .dot{width:5px;height:5px;border-radius:50%;margin-top:2px}
+  .phasebadge{padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px}
+  .legend span{display:inline-flex;align-items:center;gap:4px}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+</style>
+</head>
+<body>
+<header>
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <div>
+      <div class="brand">Mon bilan <em>forme</em></div>
+      <div class="sub" id="subline"></div>
+    </div>
+    <div id="ringzone" class="row" style="gap:10px"></div>
+  </div>
+</header>
+<main id="main"></main>
+<nav><div class="inner" id="tabs"></div></nav>
+
+<script>
+"use strict";
+/* ============================================================
+   Mon bilan forme — version autonome (fichier unique, hors-ligne)
+   Données : localStorage du navigateur. Export/Import JSON & CSV.
+   ============================================================ */
+
+const STORE_KEY = "bilanforme:data";
+
+const DEFAULT_PARAMS = [
+  { id:"sommeil_h", label:"Heures de sommeil", short:"Sommeil (h)", type:"number", min:0, max:14, step:0.5, unit:"h", icon:"🛏️" },
+  { id:"sommeil_q", label:"Qualité du sommeil", short:"Qualité sommeil", type:"emoji5", icon:"😴",
+    emojis:["😵","😫","😐","🙂","😴"], labels:["Très mauvaise","Mauvaise","Moyenne","Bonne","Excellente"] },
+  { id:"stress", label:"Niveau de stress", short:"Stress", type:"emoji5", icon:"😰",
+    emojis:["😌","🙂","😐","😰","🤯"], labels:["Très détendue","Détendue","Neutre","Stressée","Très stressée"] },
+  { id:"energie", label:"Niveau d'énergie", short:"Énergie", type:"emoji5", icon:"⚡",
+    emojis:["🪫","🥱","😐","🙂","⚡"], labels:["Épuisée","Fatiguée","Moyenne","En forme","Pleine d'énergie"] },
+  { id:"humeur", label:"Humeur", short:"Humeur", type:"emoji5", icon:"🙂",
+    emojis:["😞","😕","😐","🙂","😄"], labels:["Très basse","Basse","Neutre","Bonne","Très bonne"] },
+  { id:"douleur", label:"Douleur ressentie", short:"Douleur", type:"scale", icon:"🤕", from:0, hint:"0 = aucune · 10 = insupportable" },
+  { id:"alcool", label:"Verres d'alcool", short:"Alcool", type:"number", min:0, max:15, step:1, unit:"verre(s)", icon:"🍷" },
+  { id:"repas_copieux", label:"Repas copieux", short:"Repas copieux", type:"bool", icon:"🍽️" },
+  { id:"sport_intense", label:"Sport intense", short:"Sport intense", type:"bool", icon:"🏋️" },
+  { id:"sport_leger", label:"Activité légère (marche…)", short:"Activité légère", type:"bool", icon:"🚶" },
+  { id:"regles", label:"Règles", short:"Règles", type:"bool", special:"period", icon:"🩸" },
+  { id:"regles_flux", label:"Volume du flux", short:"Flux", type:"flow", icon:"💧" },
+];
+const DEFAULT_SYMPTOMS = ["Maux de tête","Digestion difficile","Ballonnements","Nausées","Crampes","Douleurs dorsales","Insomnie","Irritabilité","Fringales"];
+const DEFAULT_ENABLED = { sommeil_h:true, sommeil_q:true, stress:true, energie:true, humeur:true, douleur:true, alcool:true, repas_copieux:true, sport_intense:true, sport_leger:true, regles:true, regles_flux:true };
+const PHASES = ["Menstruelle","Folliculaire","Ovulatoire","Lutéale"];
+const PHASE_COLORS = { "Menstruelle":"#C9647B","Folliculaire":"#347562","Ovulatoire":"#C99B4F","Lutéale":"#5B7A9D" };
+const CHART_COLORS = ["#347562","#C99B4F","#5B7A9D"];
+const EMOJI5 = ["😞","😕","😐","🙂","😄"];
+const EMOJI5_LABELS = ["Très bas","Bas","Neutre","Bien","Très bien"];
+const FLOW_LEVELS = [
+  { v:1, label:"Spotting", icon:"🩸" },
+  { v:2, label:"Léger", icon:"💧" },
+  { v:3, label:"Moyen", icon:"💧💧" },
+  { v:4, label:"Abondant", icon:"💧💧💧" },
+];
+const MONTHS_FR = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+/* ---------- état ---------- */
+let state = {
+  config: { enabled:{...DEFAULT_ENABLED}, symptoms:[...DEFAULT_SYMPTOMS], customParams:[], isDemo:false },
+  entries: {},
+};
+let tab = "today";
+let editDate = todayStr();
+let draft = { values:{}, symptoms:[], notes:"" };
+let chartParams = ["energie","sommeil_q"];
+let confirmErase = false;
+let savedFlash = false;
+let calMonth = todayStr().slice(0,7); // "YYYY-MM"
+let weekdayParam = "stress";
+let analysisRange = 0; // 0 = tout, 30 ou 90 jours
+
+/* ---------- persistance ---------- */
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d.config) state.config = Object.assign(state.config, d.config);
+      if(d.entries) state.entries = d.entries;
+    }
+  }catch(e){ console.warn("Lecture impossible", e); }
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; }
+  catch(e){ alert("Sauvegarde impossible (stockage du navigateur plein ou bloqué)."); return false; }
+}
+
+/* ---------- utilitaires dates ---------- */
+function todayStr(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function addDays(s,n){ const d=new Date(s+"T12:00:00"); d.setDate(d.getDate()+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function diffDays(a,b){ return Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/86400000); }
+function fmtFr(s){ return new Date(s+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"}); }
+function fmtFrLong(s){ return new Date(s+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}); }
+function fmtFrShort(s){ return new Date(s+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
+function esc(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ---------- accès paramètres ---------- */
+function allParams(){ return DEFAULT_PARAMS.concat(state.config.customParams||[]); }
+function enabledParams(){ return allParams().filter(p=>state.config.enabled[p.id]); }
+function paramById(id){ return allParams().find(p=>p.id===id); }
+
+/* ---------- statistiques ---------- */
+function pearson(pairs){
+  const n=pairs.length; if(n<3) return null;
+  let sx=0,sy=0; pairs.forEach(p=>{sx+=p[0];sy+=p[1];});
+  const mx=sx/n,my=sy/n; let cov=0,vx=0,vy=0;
+  pairs.forEach(p=>{cov+=(p[0]-mx)*(p[1]-my);vx+=(p[0]-mx)**2;vy+=(p[1]-my)**2;});
+  if(vx===0||vy===0) return null;
+  return cov/Math.sqrt(vx*vy);
+}
+function mean(a){ return a.length? a.reduce((x,y)=>x+y,0)/a.length : null; }
+
+/* ---------- cycle ---------- */
+function computeCycleInfo(){
+  const entries = state.entries;
+  const dates = Object.keys(entries).sort();
+  const periodDays = dates.filter(d=>entries[d]&&entries[d].values&&entries[d].values.regles===1);
+  if(periodDays.length===0) return { starts:[], lengths:[], avgLen:28, avgPeriodLen:5, phaseOf:()=>null };
+  const starts=[], episodes=[]; let cur=null;
+  periodDays.forEach(d=>{
+    if(!cur || diffDays(cur[cur.length-1],d)>2){ cur=[d]; episodes.push(cur); starts.push(d); }
+    else cur.push(d);
+  });
+  const lengths=[];
+  for(let i=1;i<starts.length;i++){
+    const g=diffDays(starts[i-1],starts[i]);
+    lengths.push({from:starts[i-1], to:starts[i], len:g, valid:(g>=18&&g<=45)});
+  }
+  let avgLen=28;
+  const valid=lengths.filter(l=>l.valid).map(l=>l.len);
+  if(valid.length) avgLen=Math.round(mean(valid));
+  const avgPeriodLen=Math.max(2, Math.round(mean(episodes.map(e=>e.length))||5));
+  const ovuDay=avgLen-14;
+  function phaseOf(dateStr){
+    if(entries[dateStr]&&entries[dateStr].values&&entries[dateStr].values.regles===1) return {phase:"Menstruelle",day:null};
+    let lastStart=null;
+    for(const s of starts){ if(s<=dateStr) lastStart=s; else break; }
+    if(!lastStart) return null;
+    const day=diffDays(lastStart,dateStr)+1;
+    if(day>avgLen+10) return null;
+    let phase;
+    if(day<=avgPeriodLen) phase="Menstruelle";
+    else if(day>=ovuDay-1&&day<=ovuDay+1) phase="Ovulatoire";
+    else if(day<ovuDay-1) phase="Folliculaire";
+    else phase="Lutéale";
+    return {phase,day};
+  }
+  return { starts, lengths, avgLen, avgPeriodLen, phaseOf };
+}
+function getPrediction(cycle){
+  if(!state.config.enabled.regles || cycle.starts.length===0) return null;
+  const last=cycle.starts[cycle.starts.length-1];
+  const t=todayStr();
+  let next=addDays(last,cycle.avgLen);
+  let guard=0;
+  while(next<t && guard++<24) next=addDays(next,cycle.avgLen);
+  const ovu=addDays(next,-14);
+  return { next, ovu, inDays:diffDays(t,next), periodLen:cycle.avgPeriodLen, reliable:cycle.starts.length>=3 };
+}
+
+/* ---------- corrélations ---------- */
+function computeCorrelations(entriesSel){
+  const entries=entriesSel||state.entries;
+  const dates=Object.keys(entries).sort();
+  const numeric=enabledParams().filter(p=>p.type==="scale"||p.type==="number"||p.type==="bool"||p.type==="emoji5"||p.type==="flow").slice();
+  // symptômes intégrés comme paramètres oui/non (au moins 3 occurrences)
+  state.config.symptoms.forEach(name=>{
+    let cnt=0;
+    dates.forEach(d=>{ if((entries[d].symptoms||[]).includes(name)) cnt++; });
+    if(cnt>=3) numeric.push({ id:"sym:"+name, label:name, short:name, type:"bool", icon:"⚕️", isSymptom:true });
+  });
+  const val=(d,p)=>{
+    const e=entries[d]; if(!e) return null;
+    if(p.isSymptom) return (e.symptoms||[]).includes(p.short)?1:0;
+    const v=e.values?e.values[p.id]:undefined;
+    return (v===undefined||v===null)?null:Number(v);
+  };
+  const trivial=(a,b)=>(a.id==="regles"&&b.id==="regles_flux")||(a.id==="regles_flux"&&b.id==="regles")||(a.isSymptom&&b.isSymptom);
+  const results=[];
+  for(let i=0;i<numeric.length;i++) for(let j=i+1;j<numeric.length;j++){
+    const a=numeric[i],b=numeric[j],pairs=[];
+    if(trivial(a,b)) continue;
+    dates.forEach(d=>{ const x=val(d,a),y=val(d,b); if(x!==null&&y!==null) pairs.push([x,y]); });
+    const r=pearson(pairs);
+    if(r!==null&&pairs.length>=8) results.push({a,b,r,n:pairs.length,lag:0});
+  }
+  for(const a of numeric) for(const b of numeric){
+    if(a.id===b.id) continue;
+    if(trivial(a,b)) continue;
+    const pairs=[];
+    dates.forEach(d=>{ const x=val(d,a),y=val(addDays(d,1),b); if(x!==null&&y!==null) pairs.push([x,y]); });
+    const r=pearson(pairs);
+    if(r!==null&&pairs.length>=8) results.push({a,b,r,n:pairs.length,lag:1});
+  }
+  return results.filter(c=>Math.abs(c.r)>=0.3).sort((x,y)=>Math.abs(y.r)-Math.abs(x.r)).slice(0,14)
+    .map(c=>Object.assign(c,{sig:Math.abs(c.r)>=2/Math.sqrt(c.n)}));
+}
+function correlationSentence(c){
+  const A=c.a.short||c.a.label, B=c.b.short||c.b.label;
+  if(c.lag===1){
+    if(c.a.type==="bool")
+      return c.r>0 ? `Les jours avec « ${A} », « ${B} » tend à être plus élevé le lendemain.`
+                   : `Les jours avec « ${A} », « ${B} » tend à être plus bas le lendemain.`;
+    return c.r>0 ? `Quand « ${A} » est plus élevé un jour, « ${B} » tend à être plus élevé le lendemain.`
+                 : `Quand « ${A} » est plus élevé un jour, « ${B} » tend à être plus bas le lendemain.`;
+  }
+  return c.r>0 ? `« ${A} » et « ${B} » évoluent ensemble le même jour.`
+               : `« ${A} » et « ${B} » évoluent en sens inverse le même jour.`;
+}
+function strengthWord(r){ return Math.abs(r)>=0.6?"forte":Math.abs(r)>=0.45?"nette":"modérée"; }
+
+/* ---------- stats par phase ---------- */
+function computePhaseStats(cycle, entriesSel){
+  const sel=entriesSel||state.entries;
+  if(!state.config.enabled.regles || cycle.starts.length===0) return null;
+  const byPhase={};
+  PHASES.forEach(p=>byPhase[p]={count:0,sums:{},ns:{},symptoms:{}});
+  Object.keys(sel).forEach(d=>{
+    const info=cycle.phaseOf(d); if(!info) return;
+    const b=byPhase[info.phase]; b.count++;
+    const e=sel[d];
+    enabledParams().forEach(p=>{
+      if(p.type!=="scale"&&p.type!=="emoji5") return;
+      const v=e.values?e.values[p.id]:undefined;
+      if(v!==undefined&&v!==null){ b.sums[p.id]=(b.sums[p.id]||0)+Number(v); b.ns[p.id]=(b.ns[p.id]||0)+1; }
+    });
+    (e.symptoms||[]).forEach(s=>{ b.symptoms[s]=(b.symptoms[s]||0)+1; });
+  });
+  return byPhase;
+}
+
+/* ---------- bilan mensuel, jours de semaine, score de forme ---------- */
+const NEG_PARAMS = new Set(["stress","douleur","alcool"]);
+const DAY_FULL = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+
+function monthName(mk){ const parts=mk.split("-"); return MONTHS_FR[Number(parts[1])-1]+" "+parts[0]; }
+
+function monthStats(mk){
+  const res={days:0, sums:{}, ns:{}};
+  Object.keys(state.entries).forEach(d=>{
+    if(d.slice(0,7)!==mk) return;
+    res.days++;
+    const e=state.entries[d];
+    allParams().forEach(p=>{
+      if(!(p.type==="scale"||p.type==="emoji5"||p.type==="number")) return;
+      const v=e.values?e.values[p.id]:undefined;
+      if(v!==undefined&&v!==null){ res.sums[p.id]=(res.sums[p.id]||0)+Number(v); res.ns[p.id]=(res.ns[p.id]||0)+1; }
+    });
+  });
+  return res;
+}
+
+function weekdayStats(pid){
+  const src=rangeEntries();
+  const sums=[0,0,0,0,0,0,0], ns=[0,0,0,0,0,0,0];
+  Object.keys(src).forEach(d=>{
+    const v=src[d].values?src[d].values[pid]:undefined;
+    if(v===undefined||v===null) return;
+    const dow=(new Date(d+"T12:00:00").getDay()+6)%7; // lundi=0
+    sums[dow]+=Number(v); ns[dow]++;
+  });
+  return sums.map((s,i)=>ns[i]?{mean:s/ns[i],n:ns[i]}:null);
+}
+
+function rangeEntries(){
+  if(!analysisRange) return state.entries;
+  const min=addDays(todayStr(),-analysisRange);
+  const out={};
+  Object.keys(state.entries).forEach(d=>{ if(d>=min) out[d]=state.entries[d]; });
+  return out;
+}
+function rangeLabel(){
+  return analysisRange===30?"30 derniers jours":analysisRange===90?"90 derniers jours":"toutes les données";
+}
+function backupDue(){
+  const n=Object.keys(state.entries).length;
+  if(n<10||state.config.isDemo) return false;
+  const t=todayStr();
+  if(state.config.exportSnooze && diffDays(state.config.exportSnooze,t)<3) return false;
+  const le=state.config.lastExport;
+  return !le || diffDays(le,t)>15;
+}
+
+function formeScore(e){
+  if(!e||!e.values) return null;
+  const v=e.values, comps=[];
+  if(v.sommeil_q!=null) comps.push(v.sommeil_q/5);
+  if(v.energie!=null) comps.push(v.energie/5);
+  if(v.humeur!=null) comps.push(v.humeur/5);
+  if(v.stress!=null) comps.push((6-v.stress)/5);
+  if(v.douleur!=null) comps.push((10-v.douleur)/10);
+  if(comps.length<2) return null;
+  return Math.round(mean(comps)*100);
+}
+
+/* ---------- données de démo ---------- */
+function generateDemoData(){
+  const entries={}; const end=addDays(todayStr(),-1); const N=90, cycleLen=28;
+  const rnd=(a,b)=>a+Math.random()*(b-a);
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,Math.round(v)));
+  let prevAlcool=0;
+  for(let i=N-1;i>=0;i--){
+    const date=addDays(end,-i);
+    const cycleDay=((N-1-i)%cycleLen)+1;
+    const isPeriod=cycleDay<=5, isLuteal=cycleDay>17;
+    const dow=new Date(date+"T12:00:00").getDay(), weekend=(dow===5||dow===6);
+    const alcool = weekend&&Math.random()<0.6 ? Math.floor(rnd(1,4)) : (Math.random()<0.12?1:0);
+    const sportI = !isPeriod&&Math.random()<0.25?1:0;
+    const sportL = Math.random()<0.5?1:0;
+    const sommeilQ = clamp(3.5-prevAlcool*0.5+(sportL?0.25:0)+rnd(-0.8,0.8),1,5);
+    const sommeilH = Math.round((6.5+(sommeilQ-3)*0.4+rnd(-0.8,0.8))*2)/2;
+    const stress = clamp(3+(weekend?-0.8:0.3)+(isLuteal?0.5:0)+rnd(-0.9,0.9),1,5);
+    const energie = clamp(1.5+sommeilQ*0.7-stress*0.3+(sportI?0.5:0)-(isPeriod?0.6:0)+rnd(-0.6,0.6),1,5);
+    const douleur = clamp(isPeriod?rnd(4,7):isLuteal?rnd(0.5,3.5):rnd(-0.5,2),0,10);
+    const humeur = clamp(energie*0.7+rnd(0.3,1.8)-(isLuteal?0.5:0),1,5);
+    const repas = weekend&&Math.random()<0.5?1:(Math.random()<0.15?1:0);
+    const flux = isPeriod ? (cycleDay<=2?4:cycleDay<=4?3:2) : undefined;
+    const symptoms=[];
+    if((isLuteal&&Math.random()<0.45)||prevAlcool>=2) symptoms.push("Maux de tête");
+    if(isPeriod&&Math.random()<0.6) symptoms.push("Crampes");
+    if(repas&&Math.random()<0.5) symptoms.push("Digestion difficile");
+    if(isLuteal&&Math.random()<0.35) symptoms.push("Fringales");
+    if(isLuteal&&Math.random()<0.3) symptoms.push("Irritabilité");
+    if(Math.random()<0.1) symptoms.push("Ballonnements");
+    entries[date]={ values:{sommeil_h:sommeilH,sommeil_q:sommeilQ,stress,energie,douleur,alcool,
+      repas_copieux:repas,sport_intense:sportI,sport_leger:sportL,regles:isPeriod?1:0,regles_flux:flux,humeur},
+      symptoms, notes:"" };
+    prevAlcool=alcool;
+  }
+  return entries;
+}
+
+/* ---------- export / import ---------- */
+function download(filename, text, mime){
+  const blob=new Blob([text],{type:mime||"application/octet-stream"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function exportJSON(){
+  download("bilan-forme-sauvegarde-"+todayStr()+".json", JSON.stringify(state,null,2), "application/json");
+  state.config.lastExport=todayStr();
+  delete state.config.exportSnooze;
+  save(); render();
+}
+function exportCSV(){
+  const params=allParams();
+  const head=["date"].concat(params.map(p=>p.short||p.label)).concat(["symptomes","notes"]);
+  const lines=[head.join(";")];
+  Object.keys(state.entries).sort().forEach(d=>{
+    const e=state.entries[d];
+    const row=[d].concat(params.map(p=>{
+      const v=e.values?e.values[p.id]:undefined;
+      if(v===undefined||v===null) return "";
+      return String(v).replace(".",",");
+    }));
+    row.push('"'+(e.symptoms||[]).join(", ").replace(/"/g,'""')+'"');
+    row.push('"'+(e.notes||"").replace(/"/g,'""').replace(/\n/g," ")+'"');
+    lines.push(row.join(";"));
+  });
+  download("bilan-forme-donnees-"+todayStr()+".csv", "\uFEFF"+lines.join("\r\n"), "text/csv;charset=utf-8");
+}
+function importJSON(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const d=JSON.parse(reader.result);
+      if(!d.entries) throw new Error("format");
+      if(Object.keys(state.entries).length>0 &&
+         !confirm("Des données existent déjà. Remplacer TOUTES les données actuelles par celles du fichier ?")) return;
+      state={ config:Object.assign({enabled:{...DEFAULT_ENABLED},symptoms:[...DEFAULT_SYMPTOMS],customParams:[],isDemo:false}, d.config||{}), entries:d.entries };
+      state.config.lastExport=todayStr();
+      save(); render();
+      alert("Import réussi : "+Object.keys(state.entries).length+" journées chargées.");
+    }catch(e){ alert("Fichier non reconnu. Utilise un fichier exporté par cette application."); }
+  };
+  reader.readAsText(file);
+}
+
+/* ============================================================
+   Rendu
+   ============================================================ */
+function render(){
+  renderHeader(); renderTabs();
+  const m=document.getElementById("main");
+  if(tab==="today") m.innerHTML=viewToday();
+  else if(tab==="history") m.innerHTML=viewHistory();
+  else if(tab==="analysis") m.innerHTML=viewAnalysis();
+  else m.innerHTML=viewSettings();
+  bindEvents();
+}
+
+/* ----- anneau de cycle (SVG) ----- */
+function cycleRingSVG(cycle, dateStr, size){
+  const info=cycle.phaseOf(dateStr);
+  if(!info) return "";
+  const L=cycle.avgLen, P=cycle.avgPeriodLen, ovu=L-14;
+  const segs=[
+    {phase:"Menstruelle", from:1, to:P},
+    {phase:"Folliculaire", from:P+1, to:Math.max(P+1,ovu-2)},
+    {phase:"Ovulatoire", from:ovu-1, to:ovu+1},
+    {phase:"Lutéale", from:ovu+2, to:L},
+  ];
+  const R=size/2, r=R-5, C=2*Math.PI*r;
+  let s='<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'">';
+  let acc=0;
+  segs.forEach(sg=>{
+    const days=Math.max(0,sg.to-sg.from+1);
+    const frac=days/L;
+    s+='<circle cx="'+R+'" cy="'+R+'" r="'+r+'" fill="none" stroke="'+PHASE_COLORS[sg.phase]+'" stroke-width="5" '
+      +'stroke-dasharray="'+(frac*C).toFixed(2)+' '+(C-frac*C).toFixed(2)+'" '
+      +'stroke-dashoffset="'+(-acc*C+C*0.25).toFixed(2)+'" opacity="'+(sg.phase===info.phase?1:0.28)+'" stroke-linecap="butt"/>';
+    acc+=frac;
+  });
+  const day=info.day||1;
+  const ang=((day-0.5)/L)*2*Math.PI - Math.PI/2;
+  const mx=R+r*Math.cos(ang), my=R+r*Math.sin(ang);
+  s+='<circle cx="'+mx.toFixed(1)+'" cy="'+my.toFixed(1)+'" r="4" fill="'+PHASE_COLORS[info.phase]+'" stroke="#fff" stroke-width="1.5"/>';
+  s+='<text x="'+R+'" y="'+(R+4)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+PHASE_COLORS[info.phase]+'">'+(info.day?("J"+info.day):"🩸")+'</text>';
+  s+='</svg>';
+  return s;
+}
+
+function renderHeader(){
+  const n=Object.keys(state.entries).length;
+  document.getElementById("subline").textContent =
+    n+" jour"+(n>1?"s":"")+" enregistré"+(n>1?"s":"")+(state.config.isDemo?" · données de démo":"");
+  const zone=document.getElementById("ringzone");
+  const cycle=computeCycleInfo();
+  const refDate=(tab==="today")?editDate:todayStr();
+  const info=state.config.enabled.regles?cycle.phaseOf(refDate):null;
+  if(info){
+    const c=PHASE_COLORS[info.phase];
+    zone.innerHTML=cycleRingSVG(cycle,refDate,58)
+      +'<span class="phasebadge" style="background:'+c+'16;color:'+c+';border:1px solid '+c+'40">'+info.phase+'</span>';
+  } else zone.innerHTML="";
+}
+
+function renderTabs(){
+  const defs=[["today","✏️","Saisie"],["history","📅","Journal"],["analysis","🔎","Analyse"],["settings","⚙️","Réglages"]];
+  document.getElementById("tabs").innerHTML = defs.map(t=>
+    '<button data-tab="'+t[0]+'" class="'+(tab===t[0]?"on":"")+'"><span class="ic">'+t[1]+'</span>'+t[2]+'</button>'
+  ).join("");
+}
+
+/* ----- vue Saisie ----- */
+function viewToday(){
+  const n=Object.keys(state.entries).length;
+  const cycle=computeCycleInfo();
+  const pred=getPrediction(cycle);
+  let h='<div class="row" style="margin:6px 0 14px">'
+    +'<button class="navbtn" data-act="prevday">‹</button>'
+    +'<div class="grow center"><div style="font-weight:700;font-size:15px;text-transform:capitalize">'+fmtFrLong(editDate)+'</div>'
+    +(editDate!==todayStr()?'<button data-act="gototoday" style="border:none;background:none;color:var(--pine);font-size:12px;font-weight:600">revenir à aujourd\'hui</button>':"")
+    +'</div><button class="navbtn" data-act="nextday" '+(editDate>=todayStr()?"disabled":"")+'>›</button></div>';
+
+  if(backupDue()){
+    h+='<div class="card" style="background:var(--ochre-soft);border-color:rgba(201,155,79,.35)">'
+      +'<div style="font-size:13px;line-height:1.5;margin-bottom:9px"><b>💾 Pense à ta sauvegarde</b> — ta dernière exportation date de plus de 15 jours (ou n\'a jamais été faite). Tes données ne vivent que dans ce navigateur.</div>'
+      +'<div class="row">'
+      +'<button data-act="exportjson" style="flex:2;padding:11px;border-radius:12px;border:none;background:var(--pine);color:#fff;font-size:13px;font-weight:700">Sauvegarder maintenant</button>'
+      +'<button data-act="snoozebackup" style="flex:1;padding:11px;border-radius:12px;border:1px solid var(--border);background:#FBFAF7;font-size:13px;font-weight:600;color:var(--muted)">Plus tard</button>'
+      +'</div></div>';
+  }
+
+  if(pred && editDate===todayStr()){
+    h+='<div class="card predict"><div style="font-size:13.5px;line-height:1.6">'
+      +'<b style="color:var(--blush)">🌙 Prochaines règles</b> : autour du <b>'+fmtFrShort(pred.next)+'</b>'
+      +(pred.inDays>=0?' (dans '+pred.inDays+' jour'+(pred.inDays>1?'s':'')+')':'')
+      +' · ovulation estimée vers le '+fmtFrShort(pred.ovu)+'.'
+      +'</div><div style="font-size:11px;color:var(--muted);margin-top:5px">'
+      +(pred.reliable?"":"Estimation encore approximative (moins de 3 cycles enregistrés). ")
+      +'Estimations indicatives — ne convient pas comme méthode de contraception.</div></div>';
+  }
+
+  if(n===0){
+    h+='<div class="card welcome"><div style="font-weight:700;margin-bottom:4px">Bienvenue 🌿</div>'
+      +'<div style="font-size:13px;line-height:1.5">Renseigne ton ressenti chaque jour (moins d\'une minute). '
+      +'Les analyses apparaissent à partir de 10 jours de données. Tu peux générer des données de démonstration dans Réglages pour découvrir l\'onglet Analyse.</div></div>';
+  }
+
+  const prevD=addDays(editDate,-1);
+  const draftEmpty=Object.keys(draft.values).length===0&&draft.symptoms.length===0&&!(draft.notes||"").trim();
+  if(draftEmpty && state.entries[prevD]){
+    h+='<button class="ghostbtn" data-act="copyprev" style="margin-bottom:12px">↩️ Reprendre les valeurs de la veille (puis ajuster)</button>';
+  }
+
+  enabledParams().forEach(p=>{
+    if(p.type==="flow" && draft.values.regles!==1) return;
+    h+='<div class="card"><div class="flabel"><span>'+esc(p.label)+'</span>'
+      +(p.type==="scale"?'<small>'+esc(p.hint||"1 = faible · 10 = fort")+'</small>':"")+'</div>';
+    const v=draft.values[p.id];
+    if(p.type==="scale"){
+      const start=(p.from!==undefined)?p.from:1;
+      h+='<div class="scale">';
+      for(let i=start;i<=10;i++) h+='<button data-scale="'+p.id+'" data-v="'+i+'" class="'+(v===i?"on":"")+'">'+i+'</button>';
+      h+='</div>';
+    } else if(p.type==="emoji5"){
+      const em=p.emojis||EMOJI5, lb=p.labels||EMOJI5_LABELS;
+      h+='<div class="emoji5">';
+      for(let i=1;i<=5;i++) h+='<button data-scale="'+p.id+'" data-v="'+i+'" class="'+(v===i?"on":"")+'" aria-label="'+esc(lb[i-1])+'">'+em[i-1]+'</button>';
+      h+='</div><div class="emojilabel">'+(v?esc(lb[v-1]):"")+'</div>';
+    } else if(p.type==="flow"){
+      h+='<div class="flow">';
+      FLOW_LEVELS.forEach(f=>{
+        h+='<button data-scale="'+p.id+'" data-v="'+f.v+'" class="'+(v===f.v?"on":"")+'"><span class="fi">'+f.icon+'</span>'+f.label+'</button>';
+      });
+      h+='</div>';
+    } else if(p.type==="number"){
+      h+='<div class="row stepper"><button data-step="'+p.id+'" data-dir="-1">−</button>'
+        +'<div class="stepval" style="color:'+(v==null?"var(--muted)":"var(--ink)")+'">'+(v==null?"—":v)
+        +(v!=null&&p.unit?' <small>'+p.unit+'</small>':"")+'</div>'
+        +'<button data-step="'+p.id+'" data-dir="1">+</button>'
+        +(v!=null?'<button data-clear="'+p.id+'" style="margin-left:auto;border:none;background:none;color:var(--muted);font-size:12px">effacer</button>':"")
+        +'</div>';
+    } else {
+      const rose=p.special==="period"?" rose":"";
+      h+='<div class="boolgrp">'
+        +'<button data-bool="'+p.id+'" data-v="1" class="'+(v===1?"on"+rose:"")+'">Oui</button>'
+        +'<button data-bool="'+p.id+'" data-v="0" class="'+(v===0?"on"+rose:"")+'">Non</button></div>';
+    }
+    h+='</div>';
+  });
+
+  h+='<div class="card"><div class="flabel"><span>Symptômes</span></div><div class="chips">'
+    +state.config.symptoms.map(s=>'<button class="chip '+(draft.symptoms.includes(s)?"on":"")+'" data-sym="'+esc(s)+'">'+esc(s)+'</button>').join("")
+    +'</div></div>';
+
+  h+='<div class="card"><div class="flabel"><span>Notes</span></div>'
+    +'<textarea id="notes" placeholder="Événement particulier, contexte…">'+esc(draft.notes||"")+'</textarea></div>';
+
+  h+='<button class="primary'+(savedFlash?" saved":"")+'" data-act="save">'+(savedFlash?"✓ Enregistré":"Enregistrer la journée")+'</button>';
+  return h;
+}
+
+/* ----- calendrier mensuel ----- */
+function viewCalendar(){
+  const cycle=computeCycleInfo();
+  const pred=getPrediction(cycle);
+  const [Y,M]=calMonth.split("-").map(Number);
+  const first=calMonth+"-01";
+  const firstDow=(new Date(first+"T12:00:00").getDay()+6)%7; // lundi=0
+  const daysInMonth=new Date(Y,M,0).getDate();
+  const t=todayStr();
+  const predDays=new Set();
+  if(pred){ for(let i=0;i<pred.periodLen;i++) predDays.add(addDays(pred.next,i)); }
+
+  let h='<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:10px">'
+    +'<button class="navbtn" data-act="calprev" style="box-shadow:none">‹</button>'
+    +'<div style="font-weight:700;font-size:15px;text-transform:capitalize">'+MONTHS_FR[M-1]+' '+Y+'</div>'
+    +'<button class="navbtn" data-act="calnext" style="box-shadow:none">›</button></div>';
+  h+='<div class="cal">';
+  ["lu","ma","me","je","ve","sa","di"].forEach(d=>h+='<div class="dow">'+d+'</div>');
+  for(let i=0;i<firstDow;i++) h+='<div></div>';
+  for(let day=1;day<=daysInMonth;day++){
+    const dstr=calMonth+"-"+String(day).padStart(2,"0");
+    const e=state.entries[dstr];
+    const info=state.config.enabled.regles?cycle.phaseOf(dstr):null;
+    const isPeriodDay=e&&e.values&&e.values.regles===1;
+    let cls="day"; let style="";
+    if(e) cls+=" hasdata";
+    if(dstr===t) cls+=" today";
+    if(!e && predDays.has(dstr) && dstr>=t) cls+=" predicted";
+    if(isPeriodDay) style='background:var(--blush-soft);border-color:rgba(201,100,123,.4);';
+    else if(info&&e) style='background:'+PHASE_COLORS[info.phase]+'12;';
+    let dot="";
+    if(e){
+      const col=isPeriodDay?PHASE_COLORS["Menstruelle"]:(info?PHASE_COLORS[info.phase]:"var(--pine)");
+      dot='<span class="dot" style="background:'+col+'"></span>';
+      if((e.symptoms||[]).length) dot+='<span class="dot" style="background:var(--ochre);margin-top:1px"></span>';
+    }
+    h+='<button class="'+cls+'" style="'+style+'" data-day="'+dstr+'"'+(dstr>t?' disabled':'')+'>'+day+dot+'</button>';
+  }
+  h+='</div>';
+  h+='<div class="legend">'
+    +PHASES.map(p=>'<span><i style="background:'+PHASE_COLORS[p]+'"></i>'+p+'</span>').join("")
+    +'<span><i style="background:var(--ochre)"></i>Symptômes</span>'
+    +'<span><i style="border:1.5px dashed var(--blush);background:none;border-radius:50%"></i>Règles prévues</span>'
+    +'</div></div>';
+  return h;
+}
+
+/* ----- graphique SVG ----- */
+function chartSVG(){
+  const dates=Object.keys(state.entries).sort().slice(-30);
+  if(dates.length<2) return '<div class="center" style="color:var(--muted);font-size:13px;padding:24px 0">Il faut au moins 2 jours de données pour afficher la tendance.</div>';
+  const W=580,H=210,pad={l:26,r:8,t:10,b:22};
+  let maxY=5;
+  chartParams.forEach(pid=>{
+    const p=paramById(pid); if(!p) return;
+    if(p.type==="scale") maxY=Math.max(maxY,10);
+    dates.forEach(d=>{
+      const v=state.entries[d].values?state.entries[d].values[pid]:undefined;
+      if(v!=null&&Number(v)>maxY) maxY=Math.ceil(Number(v));
+    });
+  });
+  const x=i=>pad.l+i*(W-pad.l-pad.r)/Math.max(1,dates.length-1);
+  const y=v=>H-pad.b-(v/maxY)*(H-pad.t-pad.b);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">';
+  for(let g=0;g<=4;g++){
+    const gy=y(maxY*g/4);
+    s+='<line x1="'+pad.l+'" y1="'+gy+'" x2="'+(W-pad.r)+'" y2="'+gy+'" stroke="#E7E4DB" stroke-dasharray="3 3"/>'
+      +'<text x="'+(pad.l-6)+'" y="'+(gy+3)+'" font-size="9" fill="#75817A" text-anchor="end">'+(Math.round(maxY*g/4*10)/10)+'</text>';
+  }
+  const step=Math.max(1,Math.floor(dates.length/6));
+  dates.forEach((d,i)=>{ if(i%step===0||i===dates.length-1)
+    s+='<text x="'+x(i)+'" y="'+(H-6)+'" font-size="8.5" fill="#75817A" text-anchor="middle">'+fmtFr(d).replace(".","")+'</text>'; });
+  chartParams.forEach((pid,k)=>{
+    const col=CHART_COLORS[k%3]; let path="",started=false;
+    dates.forEach((d,i)=>{
+      const v=state.entries[d].values?state.entries[d].values[pid]:undefined;
+      if(v==null){ return; }
+      path+=(started?" L ":"M ")+x(i).toFixed(1)+" "+y(Number(v)).toFixed(1); started=true;
+      s+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(Number(v)).toFixed(1)+'" r="2.2" fill="'+col+'"/>';
+    });
+    if(path) s+='<path d="'+path+'" fill="none" stroke="'+col+'" stroke-width="2"/>';
+  });
+  s+='</svg>';
+  const legend='<div class="row" style="gap:14px;font-size:12px;margin-top:4px;flex-wrap:wrap">'
+    +chartParams.map((pid,k)=>{const p=paramById(pid);return '<span style="color:'+CHART_COLORS[k%3]+';font-weight:700">— '+esc(p?(p.short||p.label):pid)+'</span>';}).join("")+'</div>';
+  return s+legend;
+}
+
+/* ----- vue Journal ----- */
+function viewHistory(){
+  const cycle=computeCycleInfo();
+  let h='<div class="stitle">Calendrier</div>'+viewCalendar();
+
+  h+='<div class="stitle">Tendance (30 derniers jours)</div><div class="card">'
+    +'<div class="chips" style="margin-bottom:10px">'
+    +enabledParams().filter(p=>p.type==="scale"||p.type==="number"||p.type==="emoji5").map(p=>
+      '<button class="chip pine '+(chartParams.includes(p.id)?"on":"")+'" data-chart="'+p.id+'">'+esc(p.short||p.label)+'</button>').join("")
+    +'</div>'+chartSVG()+'</div>';
+
+  h+='<div class="stitle">Dernières journées</div>';
+  const dates=Object.keys(state.entries).sort().reverse().slice(0,30);
+  if(dates.length===0) h+='<div class="center" style="color:var(--muted);font-size:14px;padding:30px">Aucune journée enregistrée pour l\'instant.</div>';
+  dates.forEach(d=>{
+    const e=state.entries[d];
+    const info=state.config.enabled.regles?cycle.phaseOf(d):null;
+    let vals="";
+    enabledParams().filter(p=>e.values&&e.values[p.id]!==undefined).slice(0,6).forEach(p=>{
+      const v=e.values[p.id];
+      let txt;
+      if(p.type==="bool") txt=v?"oui":"non";
+      else if(p.type==="emoji5") txt=(p.emojis||EMOJI5)[v-1]||v;
+      else if(p.type==="flow"){ const f=FLOW_LEVELS.find(x=>x.v===v); txt=f?f.label.toLowerCase():v; }
+      else txt=v+(p.unit?p.unit[0]:"");
+      vals+='<span style="margin-right:10px">'+esc(p.short||p.label)+': <b style="color:var(--ink)">'+txt+'</b></span>';
+    });
+    h+='<button class="entrybtn" data-edit="'+d+'">'
+      +'<div class="row" style="justify-content:space-between"><span style="font-weight:700;font-size:14px;text-transform:capitalize">'+fmtFr(d)+'</span>'
+      +(info?'<span style="font-size:11px;font-weight:700;color:'+PHASE_COLORS[info.phase]+'">'+info.phase+'</span>':"")+'</div>'
+      +'<div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.6">'+vals
+      +((e.symptoms||[]).length?'<div style="color:var(--blush);margin-top:2px">⚕ '+esc(e.symptoms.join(", "))+'</div>':"")
+      +'</div></button>';
+  });
+  return h;
+}
+
+/* ----- cartes d'analyse ----- */
+function scoreCard(){
+  const dates=Object.keys(state.entries).sort();
+  const scored=[];
+  dates.forEach(d=>{ const s=formeScore(state.entries[d]); if(s!==null) scored.push({d,s}); });
+  if(scored.length<5) return "";
+  const last7=scored.slice(-7).map(x=>x.s);
+  const prev7=scored.slice(-14,-7).map(x=>x.s);
+  const cur=Math.round(mean(last7));
+  const delta=(prev7.length>=4)?Math.round(mean(last7)-mean(prev7)):null;
+  const col=cur>=70?"var(--pine)":cur>=50?"var(--ochre)":"var(--blush)";
+  const pts=scored.slice(-30);
+  const W=560,H=64;
+  const lo=Math.max(0,Math.min.apply(null,pts.map(p=>p.s))-6);
+  const hi=Math.min(100,Math.max.apply(null,pts.map(p=>p.s))+6);
+  const X=i=>i*W/Math.max(1,pts.length-1);
+  const Y=v=>H-3-((v-lo)/Math.max(1,hi-lo))*(H-6);
+  let path=""; pts.forEach((p,i)=>{ path+=(i?" L ":"M ")+X(i).toFixed(1)+" "+Y(p.s).toFixed(1); });
+  const area=path+" L "+W+" "+H+" L 0 "+H+" Z";
+  let deltaTxt="";
+  if(delta!==null){
+    if(delta>=3) deltaTxt='<span style="color:var(--pine);font-weight:700">▲ +'+delta+'</span> vs 7 jours précédents';
+    else if(delta<=-3) deltaTxt='<span style="color:var(--blush);font-weight:700">▼ '+delta+'</span> vs 7 jours précédents';
+    else deltaTxt='<span style="color:var(--muted);font-weight:700">→ stable</span> vs 7 jours précédents';
+  }
+  return '<div class="stitle">Score de forme</div><div class="card">'
+    +'<div class="row" style="justify-content:space-between;align-items:baseline;margin-bottom:6px;flex-wrap:wrap">'
+    +'<div><span style="font-size:36px;font-weight:800;color:'+col+'">'+cur+'</span><span style="color:var(--muted);font-size:14px"> /100 · moyenne 7 jours</span></div>'
+    +'<div style="font-size:12px;color:var(--muted)">'+deltaTxt+'</div></div>'
+    +'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto"><path d="'+area+'" fill="'+col+'" opacity="0.13"/><path d="'+path+'" fill="none" stroke="'+col+'" stroke-width="2"/></svg>'
+    +'<div style="font-size:11.5px;color:var(--muted);margin-top:6px">Combine qualité de sommeil, énergie, humeur, stress (inversé) et douleur (inversée), sur 100. 30 derniers jours.</div></div>';
+}
+
+function bilanMensuelCard(){
+  const cur=todayStr().slice(0,7);
+  const prev=addDays(cur+"-01",-1).slice(0,7);
+  const B=monthStats(cur), A=monthStats(prev);
+  if(B.days<5) return "";
+  let rows="";
+  enabledParams().filter(p=>p.type==="emoji5"||p.type==="scale"||p.type==="number").forEach(p=>{
+    const nb=B.ns[p.id]||0, na=A.ns[p.id]||0;
+    if(nb<5) return;
+    const mb=B.sums[p.id]/nb;
+    const ma=na>=5?A.sums[p.id]/na:null;
+    let evo='<span style="color:var(--muted)">—</span>';
+    if(ma!==null){
+      const d=mb-ma;
+      const th=p.type==="scale"?0.5:0.3;
+      if(Math.abs(d)<th) evo='<span style="color:var(--muted)">→</span>';
+      else{
+        const up=d>0;
+        const good=NEG_PARAMS.has(p.id)?!up:up;
+        evo='<span style="color:'+(good?"var(--pine)":"var(--blush)")+';font-weight:700">'+(up?"↗":"↘")+' '+(d>0?"+":"")+d.toFixed(1)+'</span>';
+      }
+    }
+    rows+='<tr><td style="font-weight:600">'+esc(p.short||p.label)+'</td>'
+      +'<td class="center" style="color:var(--muted)">'+(ma===null?"—":ma.toFixed(1))+'</td>'
+      +'<td class="center" style="font-weight:700">'+mb.toFixed(1)+'</td>'
+      +'<td class="center">'+evo+'</td></tr>';
+  });
+  if(!rows) return "";
+  return '<div class="stitle">Bilan du mois</div><div class="card" style="overflow-x:auto">'
+    +'<table><thead><tr><th style="text-align:left;color:var(--muted);font-weight:600">Paramètre</th>'
+    +'<th style="color:var(--muted);font-weight:600;text-transform:capitalize">'+monthName(prev).split(" ")[0]+'</th>'
+    +'<th style="text-transform:capitalize">'+monthName(cur).split(" ")[0]+'</th>'
+    +'<th style="color:var(--muted);font-weight:600">Évolution</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    +'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Vert = évolution favorable, rose = défavorable (sens inversé pour stress, douleur et alcool). Moyennes calculées à partir de 5 jours renseignés par mois minimum.</div></div>';
+}
+
+function weekdayFindings(){
+  const out=[];
+  enabledParams().filter(p=>p.type==="emoji5"||p.type==="scale").forEach(p=>{
+    const st=weekdayStats(p.id);
+    let hi=null,lo=null;
+    st.forEach((s,i)=>{
+      if(!s||s.n<3) return;
+      if(!hi||s.mean>hi.mean) hi={mean:s.mean,n:s.n,i:i};
+      if(!lo||s.mean<lo.mean) lo={mean:s.mean,n:s.n,i:i};
+    });
+    if(!hi||!lo||hi.i===lo.i) return;
+    const th=p.type==="emoji5"?0.7:1.4;
+    if(hi.mean-lo.mean>=th) out.push({p,hi,lo});
+  });
+  return out.slice(0,4);
+}
+
+function weekdayCard(){
+  const candidates=enabledParams().filter(p=>p.type==="emoji5"||p.type==="scale"||p.type==="number");
+  if(!candidates.length) return "";
+  if(!candidates.find(p=>p.id===weekdayParam)) weekdayParam=candidates[0].id;
+  const p=paramById(weekdayParam);
+  const st=weekdayStats(p.id);
+  if(st.filter(x=>x&&x.n>=2).length<4) return "";
+  const maxV=p.type==="emoji5"?5:p.type==="scale"?10:Math.max.apply(null,[1].concat(st.map(x=>x?x.mean:0)));
+  let bars="";
+  st.forEach((s,i)=>{
+    const pct=s?Math.round(s.mean/maxV*100):0;
+    bars+='<div style="margin-bottom:7px"><div class="row" style="justify-content:space-between;font-size:12.5px;margin-bottom:3px">'
+      +'<span style="text-transform:capitalize">'+DAY_FULL[i]+'</span>'
+      +'<span style="color:var(--muted)">'+(s?s.mean.toFixed(1)+' ('+s.n+' j)':"—")+'</span></div>'
+      +'<div class="bar"><div style="width:'+pct+'%;background:var(--slate)"></div></div></div>';
+  });
+  let findings="";
+  weekdayFindings().forEach(f=>{
+    findings+='<div style="font-size:13px;line-height:1.5;margin-top:6px">📅 « '+esc(f.p.short||f.p.label)+' » est en moyenne plus haut le <b>'+DAY_FULL[f.hi.i]+'</b> ('+f.hi.mean.toFixed(1)+') et plus bas le <b>'+DAY_FULL[f.lo.i]+'</b> ('+f.lo.mean.toFixed(1)+').</div>';
+  });
+  return '<div class="stitle">Par jour de la semaine</div><div class="card">'
+    +'<div class="chips" style="margin-bottom:12px">'
+    +candidates.map(c=>'<button class="chip pine '+(c.id===weekdayParam?"on":"")+'" data-wday="'+c.id+'">'+esc(c.short||c.label)+'</button>').join("")
+    +'</div>'+bars
+    +(findings?'<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:4px">'+findings+'</div>':"")
+    +'</div>';
+}
+
+function moodDistribCard(){
+  const p=paramById("humeur");
+  if(!p||!state.config.enabled.humeur) return "";
+  const src=rangeEntries();
+  const dates=Object.keys(src).sort();
+  const counts=[0,0,0,0,0]; let tot=0;
+  dates.forEach(d=>{
+    const v=src[d].values?src[d].values.humeur:undefined;
+    if(v!==undefined&&v!==null&&v>=1&&v<=5){ counts[v-1]++; tot++; }
+  });
+  if(tot<8) return "";
+  const cols=["#C9647B","#C99B4F","#CFC9B8","#7FA98F","#347562"];
+  let seg="",leg="";
+  for(let i=0;i<5;i++){
+    if(counts[i]>0) seg+='<div style="width:'+(counts[i]/tot*100)+'%;background:'+cols[i]+'"></div>';
+  }
+  const em=p.emojis||EMOJI5;
+  for(let i=0;i<5;i++){
+    leg+='<div style="text-align:center;flex:1"><div style="font-size:20px">'+em[i]+'</div><div style="font-size:11.5px;color:var(--muted)">'+Math.round(counts[i]/tot*100)+'%</div></div>';
+  }
+  return '<div class="stitle">Répartition de l\'humeur ('+rangeLabel()+')</div><div class="card">'
+    +'<div style="display:flex;height:14px;border-radius:99px;overflow:hidden;margin-bottom:10px;background:var(--border)">'+seg+'</div>'
+    +'<div style="display:flex;gap:4px">'+leg+'</div></div>';
+}
+
+function cycleLenChart(cycle){
+  const ls=cycle.lengths.slice(-12);
+  if(ls.length<2){
+    const l=ls[0];
+    return '<div style="font-size:13px;color:var(--muted)">Premier cycle mesuré : <b style="color:var(--ink)">'+l.len+' jours</b> ('+fmtFrShort(l.from)+' → '+fmtFrShort(l.to)+'). Le graphique apparaîtra dès le cycle suivant.</div>';
+  }
+  const AREA=132, VAL=20; // hauteur zone en px, réserve pour l'étiquette
+  const maxL=Math.max.apply(null,ls.map(l=>l.len).concat([cycle.avgLen]));
+  let bars="",labels="";
+  ls.forEach(l=>{
+    const hp=Math.max(6,Math.round(l.len/maxL*(AREA-VAL)));
+    const d=new Date(l.from+"T12:00:00");
+    bars+='<div class="cyc-col">'
+      +'<div class="cyc-val" style="color:'+(l.valid?"var(--ink)":"var(--muted)")+'">'+l.len+'</div>'
+      +'<div class="cyc-bar" style="height:'+hp+'px;background:'+(l.valid?"var(--blush)":"var(--border)")+'"></div>'
+      +'</div>';
+    labels+='<div>'+MONTHS_FR[d.getMonth()].slice(0,3)+'.</div>';
+  });
+  const meanPx=Math.round(cycle.avgLen/maxL*(AREA-VAL));
+  return '<div class="cyc-area">'
+    +'<div class="cyc-mean" style="bottom:'+meanPx+'px"><span>moy. '+cycle.avgLen+' j</span></div>'
+    +bars
+    +'</div><div class="cyc-labels">'+labels+'</div>'
+    +'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Chaque barre = un cycle (du 1er jour des règles au 1er jour des suivantes). Les barres grises (durée atypique, souvent des données manquantes) sont exclues de la moyenne, en pointillés verts.</div>';
+}
+
+/* ----- vue Analyse ----- */
+function viewAnalysis(){
+  const n=Object.keys(state.entries).length;
+  if(n<10){
+    return '<div class="card center" style="padding:28px"><div style="font-size:34px;margin-bottom:8px">🔎</div>'
+      +'<div style="font-weight:700;margin-bottom:6px">Encore un peu de patience</div>'
+      +'<div style="font-size:13.5px;color:var(--muted);line-height:1.6">Les analyses démarrent à partir de <b>10 jours</b> de données ('+n+'/10 pour l\'instant) et gagnent en fiabilité vers 30 jours. Pour les corrélations liées au cycle, compte 2 à 3 cycles complets.</div>'
+      +'<div class="bar" style="height:8px;margin-top:16px"><div style="width:'+Math.min(100,n*10)+'%;background:var(--pine)"></div></div></div>';
+  }
+  const rE=rangeEntries();
+  const cors=computeCorrelations(rE);
+  const cycle=computeCycleInfo();
+  const ps=computePhaseStats(cycle,rE);
+  let h='<div class="chips" style="justify-content:center;margin:8px 0 2px">'
+    +[[30,"30 jours"],[90,"90 jours"],[0,"Tout"]].map(o=>
+      '<button class="chip pine '+(analysisRange===o[0]?"on":"")+'" data-range="'+o[0]+'">'+o[1]+'</button>').join("")
+    +'</div>';
+  h+=scoreCard();
+  h+='<div class="stitle">Constats — corrélations détectées</div>';
+  if(cors.length===0)
+    h+='<div class="card"><div style="font-size:13.5px;color:var(--muted)">Aucune corrélation marquée pour l\'instant (|r| ≥ 0,30 avec au moins 8 jours communs). Continue à remplir régulièrement : plus il y a de données, plus les liens se révèlent.</div></div>';
+  cors.forEach(c=>{
+    const neg=c.r<0;
+    const dirA=c.a.type==="bool"?"OUI":"▲";
+    const dirB=(c.b.type==="bool")?(neg?"NON":"OUI"):(neg?"▼":"▲");
+    const colB=neg?"var(--blush)":"var(--pine)";
+    h+='<div class="card constat'+(neg?" neg":"")+'">'
+      +'<div class="cor-row">'
+      +'<span class="cor-chip">'+(c.a.icon||"▪")+' '+esc(c.a.short||c.a.label)+' <b class="dir" style="color:var(--muted)">'+dirA+'</b></span>'
+      +'<span class="cor-link">➜<small>'+(c.lag===1?"lendemain":"même jour")+'</small></span>'
+      +'<span class="cor-chip">'+(c.b.icon||"▪")+' '+esc(c.b.short||c.b.label)+' <b class="dir" style="color:'+colB+'">'+dirB+'</b></span>'
+      +(c.sig?'':'<span style="background:var(--ochre-soft);color:#9a7328;border:1px solid rgba(201,155,79,.35);border-radius:999px;padding:4px 9px;font-size:10.5px;font-weight:700">⏳ à confirmer</span>')
+      +'</div>'
+      +'<div style="font-size:12.5px;color:var(--muted);line-height:1.5">'+correlationSentence(c)+'</div>'
+      +'<div class="cor-meter"><div style="width:'+Math.round(Math.abs(c.r)*100)+'%;height:100%;background:'+colB+'"></div></div>'
+      +'<div class="meta" style="margin-top:4px">Force : '+strengthWord(c.r)+' (r = '+c.r.toFixed(2)+') · '+c.n+' jours de données'+(c.sig?'':' · échantillon encore limité, le lien peut être dû au hasard')+'</div>'
+      +'</div>';
+  });
+
+  h+=bilanMensuelCard();
+  h+=weekdayCard();
+  h+=moodDistribCard();
+
+  if(ps){
+    h+='<div class="stitle">Cycle — moyennes par phase</div><div class="card" style="overflow-x:auto">'
+      +'<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Cycle moyen estimé : <b style="color:var(--ink)">'+cycle.avgLen+' jours</b> · règles ≈ '+cycle.avgPeriodLen+' jours</div>'
+      +'<table><thead><tr><th style="text-align:left;color:var(--muted);font-weight:600">Paramètre</th>'
+      +PHASES.map(p=>'<th style="color:'+PHASE_COLORS[p]+'">'+p.slice(0,4)+'.</th>').join("")+'</tr></thead><tbody>';
+    enabledParams().filter(p=>p.type==="scale"||p.type==="emoji5").forEach(p=>{
+      h+='<tr><td style="font-weight:600">'+esc(p.short||p.label)+(p.type==="emoji5"?' <span style="color:var(--muted);font-weight:400">/5</span>':' <span style="color:var(--muted);font-weight:400">/10</span>')+'</td>';
+      PHASES.forEach(ph=>{
+        const b=ps[ph]; const m=b.ns[p.id]?b.sums[p.id]/b.ns[p.id]:null;
+        h+='<td class="center" style="color:'+(m===null?"var(--muted)":"var(--ink)")+'">'+(m===null?"—":m.toFixed(1))+'</td>';
+      });
+      h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+
+    if(cycle.lengths.length>=1){
+      h+='<div class="stitle">Longueur des cycles</div><div class="card">'+cycleLenChart(cycle)+'</div>';
+    }
+
+    h+='<div class="stitle">Symptômes par phase</div>';
+    PHASES.forEach(ph=>{
+      const b=ps[ph]; if(b.count===0) return;
+      const syms=Object.entries(b.symptoms).sort((a,z)=>z[1]-a[1]).slice(0,5);
+      h+='<div class="card"><div style="font-weight:700;color:'+PHASE_COLORS[ph]+';font-size:13px;margin-bottom:8px">'+ph
+        +' <span style="color:var(--muted);font-weight:400">· '+b.count+' jour'+(b.count>1?"s":"")+'</span></div>';
+      if(syms.length===0) h+='<div style="font-size:13px;color:var(--muted)">Aucun symptôme noté.</div>';
+      syms.forEach(([s,cnt])=>{
+        const pct=Math.round(cnt/b.count*100);
+        h+='<div style="margin-bottom:7px"><div class="row" style="justify-content:space-between;font-size:12.5px;margin-bottom:3px"><span>'+esc(s)+'</span><span style="color:var(--muted)">'+pct+'% des jours</span></div>'
+          +'<div class="bar"><div style="width:'+pct+'%;background:'+PHASE_COLORS[ph]+'"></div></div></div>';
+      });
+      h+='</div>';
+    });
+  }
+
+  h+='<div class="card disclaimer"><b>À garder en tête :</b> une corrélation n\'est pas une causalité, et ces analyses reposent sur ton ressenti auto-déclaré. Les prédictions de cycle sont des estimations indicatives — elles ne conviennent pas comme méthode de contraception. Ces outils servent à repérer des pistes à tester, pas à poser un diagnostic. Pour des symptômes persistants ou inhabituels, parles-en à ton médecin.</div>';
+  return h;
+}
+
+/* ----- vue Réglages ----- */
+function viewSettings(){
+  const n=Object.keys(state.entries).length;
+  const demoLocked = n>0 && !state.config.isDemo;
+  let h='<div class="stitle">Paramètres suivis</div><div class="card">';
+  allParams().forEach(p=>{
+    const on=!!state.config.enabled[p.id];
+    h+='<div class="settingrow"><span>'+esc(p.label)+'</span>'
+      +'<button class="toggle '+(on?"on":"")+'" data-toggle="'+p.id+'"><span></span></button></div>';
+  });
+  h+='<div style="margin-top:14px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Ajouter un paramètre personnalisé</div>'
+    +'<div class="row" style="flex-wrap:wrap;gap:8px">'
+    +'<input type="text" id="newparam" placeholder="Ex. Caféine, Écrans le soir…" style="flex:1;min-width:160px">'
+    +'<select id="newparamtype"><option value="emoji5">Émoticônes (5 niveaux)</option><option value="scale">Échelle 1–10</option><option value="bool">Oui / Non</option><option value="number">Nombre</option></select>'
+    +'<button data-act="addparam" style="background:var(--pine);color:#fff;border:none;border-radius:11px;padding:9px 16px;font-size:13px;font-weight:700">Ajouter</button>'
+    +'</div></div></div>';
+
+  h+='<div class="stitle">Liste des symptômes</div><div class="card">'
+    +'<div class="chips" style="margin-bottom:12px">'
+    +state.config.symptoms.map(s=>'<span class="symtag">'+esc(s)+'<button data-delsym="'+esc(s)+'">✕</button></span>').join("")
+    +'</div><div class="row"><input type="text" id="newsym" placeholder="Nouveau symptôme…" style="flex:1">'
+    +'<button data-act="addsym" style="background:var(--blush);color:#fff;border:none;border-radius:11px;padding:9px 16px;font-size:13px;font-weight:700">Ajouter</button></div></div>';
+
+  h+='<div class="stitle">Sauvegarde & transfert</div><div class="card">'
+    +'<button class="ghostbtn" data-act="exportjson">💾 Exporter mes données (fichier JSON)</button>'
+    +'<button class="ghostbtn" data-act="exportcsv">📊 Exporter en CSV (Excel / Sheets)</button>'
+    +'<button class="ghostbtn" data-act="importjson">📥 Importer une sauvegarde JSON</button>'
+    +'<input type="file" id="importfile" accept=".json,application/json" style="display:none">'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:2px">Les données sont stockées dans ce navigateur, sur cet appareil. Pour changer d\'appareil ou faire une sauvegarde régulière : exporte le fichier JSON, puis importe-le sur l\'autre appareil. Attention : vider les données de navigation du navigateur efface aussi les données de l\'application.</div></div>';
+
+  h+='<div class="stitle">Données</div><div class="card">'
+    +'<button class="ghostbtn" data-act="demo" '+(demoLocked?'disabled style="color:var(--muted);cursor:not-allowed"':"")+'>🎲 Générer 90 jours de données de démo</button>'
+    +(demoLocked?'<div style="font-size:12px;color:var(--muted);margin:-4px 0 10px">Désactivé pour protéger tes vraies données (exporte puis efface-les d\'abord si tu veux tester la démo).</div>':"")
+    +(confirmErase
+      ? '<div class="row"><button data-act="erase2" style="flex:1;padding:12px;border-radius:13px;border:none;background:var(--blush);color:#fff;font-size:14px;font-weight:700">Oui, tout effacer</button>'
+        +'<button data-act="erasecancel" style="flex:1;padding:12px;border-radius:13px;border:1px solid var(--border);background:#FBFAF7;font-size:14px;font-weight:600">Annuler</button></div>'
+      : '<button class="dangerbtn" data-act="erase1">Effacer toutes les données</button>')
+    +'</div>';
+
+  h+='<div class="footer-note">Cette application fonctionne entièrement hors-ligne : aucune donnée n\'est envoyée sur internet. Elle n\'est pas un dispositif médical — pour des symptômes persistants, consulte un professionnel de santé.</div>';
+  return h;
+}
+
+/* ============================================================
+   Événements
+   ============================================================ */
+function loadDraft(){
+  const e=state.entries[editDate];
+  draft = e ? { values:Object.assign({},e.values), symptoms:(e.symptoms||[]).slice(), notes:e.notes||"" }
+            : { values:{}, symptoms:[], notes:"" };
+}
+function keepNotes(){
+  const t=document.getElementById("notes");
+  if(t) draft.notes=t.value;
+}
+
+function bindEvents(){
+  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ keepNotes(); tab=b.dataset.tab; confirmErase=false; render(); });
+
+  document.querySelectorAll("[data-scale]").forEach(b=>b.onclick=()=>{
+    keepNotes();
+    const id=b.dataset.scale, v=Number(b.dataset.v);
+    draft.values[id] = (draft.values[id]===v)?undefined:v;
+    if(draft.values[id]===undefined) delete draft.values[id];
+    render();
+  });
+  document.querySelectorAll("[data-bool]").forEach(b=>b.onclick=()=>{
+    keepNotes();
+    const id=b.dataset.bool, v=Number(b.dataset.v);
+    draft.values[id] = (draft.values[id]===v)?undefined:v;
+    if(draft.values[id]===undefined) delete draft.values[id];
+    if(id==="regles" && draft.values.regles!==1) delete draft.values.regles_flux;
+    render();
+  });
+  document.querySelectorAll("[data-step]").forEach(b=>b.onclick=()=>{
+    keepNotes();
+    const p=paramById(b.dataset.step), dir=Number(b.dataset.dir);
+    const cur=draft.values[p.id];
+    let nv;
+    if(cur==null) nv = dir>0 ? (p.step===1?1:p.step) : p.min;
+    else nv = Math.max(p.min, Math.min(p.max, +(cur+dir*p.step).toFixed(1)));
+    draft.values[p.id]=nv; render();
+  });
+  document.querySelectorAll("[data-clear]").forEach(b=>b.onclick=()=>{ keepNotes(); delete draft.values[b.dataset.clear]; render(); });
+  document.querySelectorAll("[data-sym]").forEach(b=>b.onclick=()=>{
+    keepNotes();
+    const s=b.dataset.sym;
+    draft.symptoms = draft.symptoms.includes(s) ? draft.symptoms.filter(x=>x!==s) : draft.symptoms.concat([s]);
+    render();
+  });
+  document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ editDate=b.dataset.edit; loadDraft(); tab="today"; render(); });
+  document.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{ editDate=b.dataset.day; loadDraft(); tab="today"; render(); });
+  document.querySelectorAll("[data-chart]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.chart;
+    chartParams = chartParams.includes(id) ? chartParams.filter(x=>x!==id) : chartParams.slice(-2).concat([id]);
+    render();
+  });
+  document.querySelectorAll("[data-wday]").forEach(b=>b.onclick=()=>{ weekdayParam=b.dataset.wday; render(); });
+  document.querySelectorAll("[data-range]").forEach(b=>b.onclick=()=>{ analysisRange=Number(b.dataset.range); render(); });
+  document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.toggle;
+    state.config.enabled[id]=!state.config.enabled[id];
+    save(); render();
+  });
+  document.querySelectorAll("[data-delsym]").forEach(b=>b.onclick=()=>{
+    state.config.symptoms=state.config.symptoms.filter(x=>x!==b.dataset.delsym);
+    save(); render();
+  });
+
+  document.querySelectorAll("[data-act]").forEach(b=>{
+    const act=b.dataset.act;
+    b.onclick=()=>{
+      if(act==="prevday"){ keepNotes(); editDate=addDays(editDate,-1); loadDraft(); render(); }
+      else if(act==="nextday"){ keepNotes(); if(editDate<todayStr()){ editDate=addDays(editDate,1); loadDraft(); render(); } }
+      else if(act==="gototoday"){ keepNotes(); editDate=todayStr(); loadDraft(); render(); }
+      else if(act==="copyprev"){
+        const pe=state.entries[addDays(editDate,-1)];
+        if(pe){ draft.values=Object.assign({},pe.values); draft.symptoms=(pe.symptoms||[]).slice(); render(); }
+      }
+      else if(act==="snoozebackup"){ state.config.exportSnooze=todayStr(); save(); render(); }
+      else if(act==="calprev"){ const [y,m]=calMonth.split("-").map(Number); const d=new Date(y,m-2,1); calMonth=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); render(); }
+      else if(act==="calnext"){ const [y,m]=calMonth.split("-").map(Number); const d=new Date(y,m,1); calMonth=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); render(); }
+      else if(act==="save"){
+        keepNotes();
+        const hasContent=Object.keys(draft.values).length>0||draft.symptoms.length>0||(draft.notes||"").trim()!=="";
+        if(hasContent) state.entries[editDate]={ values:Object.assign({},draft.values), symptoms:draft.symptoms.slice(), notes:draft.notes };
+        else delete state.entries[editDate];
+        if(save()){ savedFlash=true; render(); setTimeout(()=>{savedFlash=false;render();},1600); }
+      }
+      else if(act==="addparam"){
+        const label=document.getElementById("newparam").value.trim();
+        const type=document.getElementById("newparamtype").value;
+        if(!label) return;
+        const id="custom_"+label.toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,24)+"_"+Date.now().toString(36).slice(-3);
+        const p={id,label,short:label,type};
+        if(type==="number"){p.min=0;p.max=50;p.step=1;}
+        state.config.customParams=(state.config.customParams||[]).concat([p]);
+        state.config.enabled[id]=true;
+        save(); render();
+      }
+      else if(act==="addsym"){
+        const s=document.getElementById("newsym").value.trim();
+        if(!s||state.config.symptoms.includes(s)) return;
+        state.config.symptoms.push(s); save(); render();
+      }
+      else if(act==="exportjson") exportJSON();
+      else if(act==="exportcsv") exportCSV();
+      else if(act==="importjson") document.getElementById("importfile").click();
+      else if(act==="demo"){
+        if(Object.keys(state.entries).length>0&&!state.config.isDemo) return;
+        state.entries=generateDemoData(); state.config.isDemo=true;
+        save(); tab="analysis"; render();
+      }
+      else if(act==="erase1"){ confirmErase=true; render(); }
+      else if(act==="erasecancel"){ confirmErase=false; render(); }
+      else if(act==="erase2"){
+        state.entries={}; state.config.isDemo=false; confirmErase=false;
+        save(); loadDraft(); render();
+      }
+    };
+  });
+
+  const fi=document.getElementById("importfile");
+  if(fi) fi.onchange=()=>{ if(fi.files&&fi.files[0]) importJSON(fi.files[0]); fi.value=""; };
+}
+
+/* ---------- démarrage ---------- */
+load();
+loadDraft();
+render();
+
+/* ---------- PWA : service worker (uniquement si hébergé en ligne) ---------- */
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      /* pas bloquant : l'app fonctionne aussi sans */
+    });
+  });
+}
+</script>
+</body>
+</html>
