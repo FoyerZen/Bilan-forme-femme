@@ -161,22 +161,22 @@
 const STORE_KEY = "bilanforme:data";
 
 const DEFAULT_PARAMS = [
-  { id:"sommeil_h", label:"Heures de sommeil", short:"Sommeil (h)", type:"number", min:0, max:14, step:0.5, unit:"h", icon:"🛏️" },
-  { id:"sommeil_q", label:"Qualité du sommeil", short:"Qualité sommeil", type:"emoji5", icon:"😴",
+  { id:"sommeil_h", label:"Heures de sommeil", short:"Sommeil (h)", type:"number", min:0, max:14, step:0.5, unit:"h", icon:"🛏️", kind:"factor" },
+  { id:"sommeil_q", label:"Qualité du sommeil", short:"Qualité sommeil", type:"emoji5", icon:"😴", kind:"outcome",
     emojis:["😵","😫","😐","🙂","😴"], labels:["Très mauvaise","Mauvaise","Moyenne","Bonne","Excellente"] },
-  { id:"stress", label:"Niveau de stress", short:"Stress", type:"emoji5", icon:"😰",
+  { id:"stress", label:"Niveau de stress", short:"Stress", type:"emoji5", icon:"😰", kind:"outcome", neg:true,
     emojis:["😌","🙂","😐","😰","🤯"], labels:["Très détendue","Détendue","Neutre","Stressée","Très stressée"] },
-  { id:"energie", label:"Niveau d'énergie", short:"Énergie", type:"emoji5", icon:"⚡",
+  { id:"energie", label:"Niveau d'énergie", short:"Énergie", type:"emoji5", icon:"⚡", kind:"outcome",
     emojis:["🪫","🥱","😐","🙂","⚡"], labels:["Épuisée","Fatiguée","Moyenne","En forme","Pleine d'énergie"] },
-  { id:"humeur", label:"Humeur", short:"Humeur", type:"emoji5", icon:"🙂",
+  { id:"humeur", label:"Humeur", short:"Humeur", type:"emoji5", icon:"🙂", kind:"outcome",
     emojis:["😞","😕","😐","🙂","😄"], labels:["Très basse","Basse","Neutre","Bonne","Très bonne"] },
-  { id:"douleur", label:"Douleur ressentie", short:"Douleur", type:"scale", icon:"🤕", from:0, hint:"0 = aucune · 10 = insupportable" },
-  { id:"alcool", label:"Verres d'alcool", short:"Alcool", type:"number", min:0, max:15, step:1, unit:"verre(s)", icon:"🍷" },
-  { id:"repas_copieux", label:"Repas copieux", short:"Repas copieux", type:"bool", icon:"🍽️" },
-  { id:"sport_intense", label:"Sport intense", short:"Sport intense", type:"bool", icon:"🏋️" },
-  { id:"sport_leger", label:"Activité légère (marche…)", short:"Activité légère", type:"bool", icon:"🚶" },
-  { id:"regles", label:"Règles", short:"Règles", type:"bool", special:"period", icon:"🩸" },
-  { id:"regles_flux", label:"Volume du flux", short:"Flux", type:"flow", icon:"💧" },
+  { id:"douleur", label:"Douleur ressentie", short:"Douleur", type:"scale", icon:"🤕", from:0, kind:"outcome", neg:true, hint:"0 = aucune · 10 = insupportable" },
+  { id:"alcool", label:"Verres d'alcool", short:"Alcool", type:"number", min:0, max:15, step:1, unit:"verre(s)", icon:"🍷", kind:"factor" },
+  { id:"repas_copieux", label:"Repas copieux", short:"Repas copieux", type:"bool", icon:"🍽️", kind:"factor" },
+  { id:"sport_intense", label:"Sport intense", short:"Sport intense", type:"bool", icon:"🏋️", kind:"factor" },
+  { id:"sport_leger", label:"Activité légère (marche…)", short:"Activité légère", type:"bool", icon:"🚶", kind:"factor" },
+  { id:"regles", label:"Règles", short:"Règles", type:"bool", special:"period", icon:"🩸", kind:"factor" },
+  { id:"regles_flux", label:"Volume du flux", short:"Flux", type:"flow", icon:"💧", kind:"factor" },
 ];
 const DEFAULT_SYMPTOMS = ["Maux de tête","Digestion difficile","Ballonnements","Nausées","Crampes","Douleurs dorsales","Insomnie","Irritabilité","Fringales"];
 const DEFAULT_ENABLED = { sommeil_h:true, sommeil_q:true, stress:true, energie:true, humeur:true, douleur:true, alcool:true, repas_copieux:true, sport_intense:true, sport_leger:true, regles:true, regles_flux:true };
@@ -195,7 +195,8 @@ const MONTHS_FR = ["janvier","février","mars","avril","mai","juin","juillet","a
 
 /* ---------- état ---------- */
 let state = {
-  config: { enabled:{...DEFAULT_ENABLED}, symptoms:[...DEFAULT_SYMPTOMS], customParams:[], isDemo:false },
+  config: { enabled:{...DEFAULT_ENABLED}, symptoms:[...DEFAULT_SYMPTOMS], customParams:[], isDemo:false,
+            dismissed:[], experiments:[], paramKinds:{} },
   entries: {},
 };
 let tab = "today";
@@ -207,6 +208,8 @@ let savedFlash = false;
 let calMonth = todayStr().slice(0,7); // "YYYY-MM"
 let weekdayParam = "stress";
 let analysisRange = 0; // 0 = tout, 30 ou 90 jours
+let showDismissed = false;
+let newExp = { factor:"", outcome:"", days:21 };
 
 /* ---------- persistance ---------- */
 function load(){
@@ -249,6 +252,32 @@ function pearson(pairs){
 }
 function mean(a){ return a.length? a.reduce((x,y)=>x+y,0)/a.length : null; }
 
+/* Spearman : corrélation des rangs, robuste pour les échelles ordinales (émoji 1-5, EVA 0-10)
+   avec gestion des ex aequo par rangs moyens. */
+function ranks(vals){
+  const idx=vals.map((v,i)=>({v,i})).sort((a,b)=>a.v-b.v);
+  const r=new Array(vals.length);
+  let i=0;
+  while(i<idx.length){
+    let j=i;
+    while(j+1<idx.length && idx[j+1].v===idx[i].v) j++;
+    const avg=(i+j)/2+1;
+    for(let k=i;k<=j;k++) r[idx[k].i]=avg;
+    i=j+1;
+  }
+  return r;
+}
+function spearman(pairs){
+  if(pairs.length<3) return null;
+  const rx=ranks(pairs.map(p=>p[0])), ry=ranks(pairs.map(p=>p[1]));
+  return pearson(rx.map((v,i)=>[v,ry[i]]));
+}
+/* Choisit la méthode : Spearman si au moins un des deux est ordinal, Pearson sinon */
+function correlate(pairs,a,b){
+  const ordinal=p=>p.type==="emoji5"||p.type==="scale"||p.type==="flow"||p.type==="bool";
+  return (ordinal(a)||ordinal(b)) ? spearman(pairs) : pearson(pairs);
+}
+
 /* ---------- cycle ---------- */
 function computeCycleInfo(){
   const entries = state.entries;
@@ -290,23 +319,47 @@ function getPrediction(cycle){
   if(!state.config.enabled.regles || cycle.starts.length===0) return null;
   const last=cycle.starts[cycle.starts.length-1];
   const t=todayStr();
-  let next=addDays(last,cycle.avgLen);
-  let guard=0;
-  while(next<t && guard++<24) next=addDays(next,cycle.avgLen);
-  const ovu=addDays(next,-14);
-  return { next, ovu, inDays:diffDays(t,next), periodLen:cycle.avgPeriodLen, reliable:cycle.starts.length>=3 };
+  const expected=addDays(last,cycle.avgLen);   // date attendue, on ne la déplace pas
+  const dayOfCycle=diffDays(last,t)+1;
+  const late=diffDays(expected,t);             // >0 = jours de retard
+  // On ne saute au cycle suivant qu'après un retard vraiment long (grossesse, aménorrhée,
+  // ou plus vraisemblablement des saisies oubliées) : au-delà, la prévision n'a plus de sens.
+  const MAX_LATE=21;
+  const stale=late>MAX_LATE;
+  const next=expected;
+  const ovu=addDays(expected,-14);
+  return {
+    next, ovu,
+    inDays:diffDays(t,next),
+    late:late>0?late:0,
+    dayOfCycle,
+    stale,
+    periodLen:cycle.avgPeriodLen,
+    reliable:cycle.starts.length>=3
+  };
 }
 
 /* ---------- corrélations ---------- */
+const LAGS=[0,1,2,3,7];
+function lagLabel(l){
+  return l===0?"le même jour":l===1?"le lendemain":l===7?"une semaine après":"à J+"+l;
+}
+function paramKind(p){
+  const ov=state.config.paramKinds||{};
+  if(ov[p.id]) return ov[p.id];
+  return p.kind || "factor";
+}
+function dismissKey(c){ return c.a.id+"|"+c.b.id+"|"+c.lag; }
+
 function computeCorrelations(entriesSel){
   const entries=entriesSel||state.entries;
   const dates=Object.keys(entries).sort();
-  const numeric=enabledParams().filter(p=>p.type==="scale"||p.type==="number"||p.type==="bool"||p.type==="emoji5"||p.type==="flow").slice();
-  // symptômes intégrés comme paramètres oui/non (au moins 3 occurrences)
+  const usable=enabledParams().filter(p=>p.type==="scale"||p.type==="number"||p.type==="bool"||p.type==="emoji5"||p.type==="flow").slice();
+  // symptômes : toujours des RÉSULTATS (au moins 3 occurrences)
   state.config.symptoms.forEach(name=>{
     let cnt=0;
     dates.forEach(d=>{ if((entries[d].symptoms||[]).includes(name)) cnt++; });
-    if(cnt>=3) numeric.push({ id:"sym:"+name, label:name, short:name, type:"bool", icon:"⚕️", isSymptom:true });
+    if(cnt>=3) usable.push({ id:"sym:"+name, label:name, short:name, type:"bool", icon:"⚕️", isSymptom:true, kind:"outcome" });
   });
   const val=(d,p)=>{
     const e=entries[d]; if(!e) return null;
@@ -314,94 +367,156 @@ function computeCorrelations(entriesSel){
     const v=e.values?e.values[p.id]:undefined;
     return (v===undefined||v===null)?null:Number(v);
   };
-  // Paires triviales fixes
-  const trivialFixed=(a,b)=>(a.id==="regles"&&b.id==="regles_flux")||(a.id==="regles_flux"&&b.id==="regles")||(a.isSymptom&&b.isSymptom);
-  // Détection parent-enfant pour les oui/non : si A=oui implique B=oui >80% du temps (ou inverse), c'est trivial
-  const boolIds=numeric.filter(p=>p.type==="bool"&&!p.isSymptom);
+  const factors=usable.filter(p=>paramKind(p)==="factor");
+  const outcomes=usable.filter(p=>paramKind(p)==="outcome");
+
+  // Paires triviales
+  const trivialFixed=(a,b)=>(a.id==="regles"&&b.id==="regles_flux")||(a.id==="regles_flux"&&b.id==="regles");
   const boolVals={};
-  boolIds.forEach(p=>{
-    boolVals[p.id]={ones:new Set(), all:new Set()};
-    dates.forEach(d=>{
-      const v=val(d,p); if(v!==null){ boolVals[p.id].all.add(d); if(v===1) boolVals[p.id].ones.add(d); }
-    });
+  usable.filter(p=>p.type==="bool").forEach(p=>{
+    boolVals[p.id]={ones:new Set()};
+    dates.forEach(d=>{ if(val(d,p)===1) boolVals[p.id].ones.add(d); });
   });
   function isParentChild(a,b){
-    if(a.type!=="bool"||b.type!=="bool"||a.isSymptom||b.isSymptom) return false;
+    if(a.type!=="bool"||b.type!=="bool") return false;
     const ba=boolVals[a.id], bb=boolVals[b.id];
     if(!ba||!bb) return false;
-    // a⊂b : chaque fois que a=oui, b=oui aussi (>80%)
     if(ba.ones.size>=3){
-      let overlap=0; ba.ones.forEach(d=>{ if(bb.ones.has(d)) overlap++; });
-      if(overlap/ba.ones.size>=0.8) return true;
+      let ov=0; ba.ones.forEach(d=>{ if(bb.ones.has(d)) ov++; });
+      if(ov/ba.ones.size>=0.8) return true;
     }
-    // b⊂a
     if(bb.ones.size>=3){
-      let overlap=0; bb.ones.forEach(d=>{ if(ba.ones.has(d)) overlap++; });
-      if(overlap/bb.ones.size>=0.8) return true;
+      let ov=0; bb.ones.forEach(d=>{ if(ba.ones.has(d)) ov++; });
+      if(ov/bb.ones.size>=0.8) return true;
     }
     return false;
   }
   const trivial=(a,b)=> trivialFixed(a,b) || isParentChild(a,b);
-  const MIN_N = 15; // jours de données communes minimum
-  const MIN_EVENTS = 4; // occurrences minimales d'un événement rare (ex. alcool, sieste)
 
-  // Un paramètre est exploitable s'il présente assez de variabilité réelle
-  function hasEnoughVariation(p, pairsVals){
+  const MIN_N=15, MIN_EVENTS=4;
+  function hasEnoughVariation(p, vals){
     if(p.type==="bool"||p.type==="flow"){
       let ones=0, zeros=0;
-      pairsVals.forEach(v=>{ if(v>0) ones++; else zeros++; });
+      vals.forEach(v=>{ if(v>0) ones++; else zeros++; });
       return ones>=MIN_EVENTS && zeros>=MIN_EVENTS;
     }
-    // échelles/nombres : au moins 3 valeurs distinctes et un écart-type non négligeable
-    const uniq=new Set(pairsVals);
-    if(uniq.size<3) return false;
-    const m=mean(pairsVals);
-    const sd=Math.sqrt(mean(pairsVals.map(v=>(v-m)*(v-m))));
-    return sd>0.4;
+    if(new Set(vals).size<3) return false;
+    const m=mean(vals);
+    return Math.sqrt(mean(vals.map(v=>(v-m)*(v-m))))>0.4;
   }
 
   const results=[];
-  for(let i=0;i<numeric.length;i++) for(let j=i+1;j<numeric.length;j++){
-    const a=numeric[i],b=numeric[j],pairs=[];
-    if(trivial(a,b)) continue;
-    dates.forEach(d=>{ const x=val(d,a),y=val(d,b); if(x!==null&&y!==null) pairs.push([x,y]); });
-    if(pairs.length<MIN_N) continue;
-    if(!hasEnoughVariation(a,pairs.map(p=>p[0]))||!hasEnoughVariation(b,pairs.map(p=>p[1]))) continue;
-    const r=pearson(pairs);
-    if(r!==null) results.push({a,b,r,n:pairs.length,lag:0});
-  }
-  for(const a of numeric) for(const b of numeric){
-    if(a.id===b.id) continue;
-    if(trivial(a,b)) continue;
-    const pairs=[];
-    dates.forEach(d=>{ const x=val(d,a),y=val(addDays(d,1),b); if(x!==null&&y!==null) pairs.push([x,y]); });
-    if(pairs.length<MIN_N) continue;
-    if(!hasEnoughVariation(a,pairs.map(p=>p[0]))||!hasEnoughVariation(b,pairs.map(p=>p[1]))) continue;
-    const r=pearson(pairs);
-    if(r!==null) results.push({a,b,r,n:pairs.length,lag:1});
-  }
-  // Significativité : test t bilatéral approché, p < 0.05
-  return results.filter(c=>Math.abs(c.r)>=0.3).sort((x,y)=>Math.abs(y.r)-Math.abs(x.r)).slice(0,14)
-    .map(c=>{
-      const t=c.r*Math.sqrt((c.n-2)/(1-c.r*c.r));
-      // t critique approx pour p<0.05 bilatéral : ~2.1 pour n=15..30, ~2.0 pour n>30
-      const tc=c.n<=20?2.1:c.n<=40?2.04:1.96;
-      return Object.assign(c,{sig:Math.abs(t)>=tc});
+  const CYCLE_IDS=new Set(["regles","regles_flux"]);
+  factors.forEach(a=>{
+    outcomes.forEach(b=>{
+      if(a.id===b.id||trivial(a,b)) return;
+      // Pour les paramètres de cycle, seul le même jour a du sens : un décalage
+      // capterait la phase du cycle (folliculaire, lutéale) et non un effet des règles.
+      const lags=CYCLE_IDS.has(a.id)?[0]:LAGS;
+      lags.forEach(lag=>{
+        const pairs=[], withV=[], withoutV=[];
+        dates.forEach(d=>{
+          const x=val(d,a), y=val(lag?addDays(d,lag):d,b);
+          if(x===null||y===null) return;
+          pairs.push([x,y]);
+          if(a.type==="bool"||a.type==="flow"){ (x>0?withV:withoutV).push(y); }
+        });
+        if(pairs.length<MIN_N) return;
+        if(!hasEnoughVariation(a,pairs.map(p=>p[0]))||!hasEnoughVariation(b,pairs.map(p=>p[1]))) return;
+        const r=correlate(pairs,a,b);
+        if(r===null) return;
+        const res={a,b,r,n:pairs.length,lag,nLags:lags.length};
+        // comparaison "jours avec / jours sans" pour les facteurs binaires
+        if(withV.length>=MIN_EVENTS && withoutV.length>=MIN_EVENTS){
+          res.mWith=mean(withV); res.mWithout=mean(withoutV);
+          res.nWith=withV.length; res.nWithout=withoutV.length;
+          res.delta=res.mWith-res.mWithout;
+        }
+        results.push(res);
+      });
     });
+  });
+
+  // Significativité (test t bilatéral). Comme on retient le meilleur de plusieurs décalages,
+  // on corrige le seuil (Bonferroni) pour ne pas gonfler les faux positifs.
+  const scored=results.filter(c=>Math.abs(c.r)>=0.3).map(c=>{
+    const t=Math.abs(c.r)*Math.sqrt((c.n-2)/(1-c.r*c.r));
+    let tc=c.n<=20?2.1:c.n<=40?2.02:1.96;          // p<0.05
+    if((c.nLags||1)>1) tc=c.n<=20?3.0:c.n<=40?2.75:2.6;  // p<0.01 (≈0.05/5 décalages)
+    return Object.assign(c,{sig:t>=tc});
+  }).sort((x,y)=>Math.abs(y.r)-Math.abs(x.r));
+
+  const bestByPair={}, kept=[];
+  scored.forEach(c=>{
+    const k=c.a.id+"|"+c.b.id;
+    if(bestByPair[k]) return;      // un seul décalage retenu par paire : le plus fort
+    bestByPair[k]=true;
+    kept.push(c);
+  });
+
+  const dismissed=new Set(state.config.dismissed||[]);
+  const visible=kept.filter(c=>!dismissed.has(dismissKey(c))).slice(0,14);
+  const hidden=kept.filter(c=>dismissed.has(dismissKey(c)));
+  visible.hidden=hidden;
+  return visible;
 }
+
 function correlationSentence(c){
   const A=c.a.short||c.a.label, B=c.b.short||c.b.label;
-  if(c.lag===1){
-    if(c.a.type==="bool")
-      return c.r>0 ? `Les jours avec « ${A} », « ${B} » tend à être plus élevé le lendemain.`
-                   : `Les jours avec « ${A} », « ${B} » tend à être plus bas le lendemain.`;
-    return c.r>0 ? `Quand « ${A} » est plus élevé un jour, « ${B} » tend à être plus élevé le lendemain.`
-                 : `Quand « ${A} » est plus élevé un jour, « ${B} » tend à être plus bas le lendemain.`;
+  const when=lagLabel(c.lag);
+  if(c.delta!==undefined){
+    const dir=c.delta>0?"plus élevé":"plus bas";
+    return `Les jours avec « ${A} », « ${B} » est en moyenne ${dir} ${when}.`;
   }
-  return c.r>0 ? `« ${A} » et « ${B} » évoluent ensemble le même jour.`
-               : `« ${A} » et « ${B} » évoluent en sens inverse le même jour.`;
+  if(c.lag===0) return c.r>0 ? `Quand « ${A} » augmente, « ${B} » a tendance à augmenter aussi.`
+                             : `Quand « ${A} » augmente, « ${B} » a tendance à diminuer.`;
+  return c.r>0 ? `Quand « ${A} » est plus élevé, « ${B} » tend à être plus élevé ${when}.`
+               : `Quand « ${A} » est plus élevé, « ${B} » tend à être plus bas ${when}.`;
 }
 function strengthWord(r){ return Math.abs(r)>=0.6?"forte":Math.abs(r)>=0.45?"nette":"modérée"; }
+function fmtVal(p,v){
+  if(v===null||v===undefined) return "—";
+  if(p.type==="emoji5") return v.toFixed(1)+"/5";
+  if(p.type==="scale") return v.toFixed(1)+"/10";
+  if(p.type==="bool") return Math.round(v*100)+"%";
+  return v.toFixed(1)+(p.unit?" "+p.unit.replace("(s)",""):"");
+}
+
+/* ---------- expériences ---------- */
+function runExperiment(exp){
+  const entries=state.entries;
+  const a=paramById(exp.factor), b=paramById(exp.outcome);
+  if(!a||!b) return null;
+  const start=exp.start, end=addDays(exp.start, exp.days-1);
+  const today=todayStr();
+  const stop=end<today?end:today;
+  const withV=[], withoutV=[];
+  let d=start, filled=0;
+  while(d<=stop){
+    const e=entries[d];
+    if(e){
+      const x=e.values?e.values[a.id]:undefined;
+      const y=b.isSymptom?null:(e.values?e.values[b.id]:undefined);
+      if(x!==undefined&&x!==null&&y!==undefined&&y!==null){
+        filled++;
+        (Number(x)>0?withV:withoutV).push(Number(y));
+      }
+    }
+    d=addDays(d,1);
+  }
+  const daysElapsed=Math.min(exp.days, diffDays(start,today)+1);
+  const done=today>end;
+  const res={exp,a,b,filled,daysElapsed,done,nWith:withV.length,nWithout:withoutV.length};
+  if(withV.length>=3&&withoutV.length>=3){
+    res.mWith=mean(withV); res.mWithout=mean(withoutV);
+    res.delta=res.mWith-res.mWithout;
+    // seuil d'effet notable : 0.4 sur échelle /5, 0.8 sur /10
+    const th=b.type==="scale"?0.8:0.4;
+    res.verdict=Math.abs(res.delta)<th?"neutre":(res.delta>0?"positif":"negatif");
+    if(b.neg&&res.verdict!=="neutre") res.verdict=res.verdict==="positif"?"negatif":"positif";
+  }
+  return res;
+}
 
 /* ---------- stats par phase ---------- */
 function computePhaseStats(cycle, entriesSel){
@@ -659,13 +774,26 @@ function viewToday(){
   }
 
   if(pred && editDate===todayStr()){
-    h+='<div class="card predict"><div style="font-size:13.5px;line-height:1.6">'
-      +'<b style="color:var(--blush)">🌙 Prochaines règles</b> : autour du <b>'+fmtFrShort(pred.next)+'</b>'
-      +(pred.inDays>=0?' (dans '+pred.inDays+' jour'+(pred.inDays>1?'s':'')+')':'')
-      +' · ovulation estimée vers le '+fmtFrShort(pred.ovu)+'.'
-      +'</div><div style="font-size:11px;color:var(--muted);margin-top:5px">'
-      +(pred.reliable?"":"Estimation encore approximative (moins de 3 cycles enregistrés). ")
-      +'Estimations indicatives — ne convient pas comme méthode de contraception.</div></div>';
+    if(pred.late>0){
+      const cycLen=cycle.avgLen+pred.late;
+      h+='<div class="card predict"><div style="font-size:13.5px;line-height:1.6">'
+        +'<b style="color:var(--blush)">🌙 Règles en retard de '+pred.late+' jour'+(pred.late>1?'s':'')+'</b><br>'
+        +'Elles étaient attendues autour du <b>'+fmtFrShort(pred.next)+'</b> (cycle moyen : '+cycle.avgLen+' jours). '
+        +'Tu es au jour '+pred.dayOfCycle+' de ton cycle, soit '+cycLen+' jours si elles arrivaient aujourd\'hui.'
+        +'</div><div style="font-size:11px;color:var(--muted);margin-top:5px">'
+        +(pred.stale
+          ? 'Retard important : vérifie que tes jours de règles sont bien cochés — un oubli de saisie décale tout le calcul. '
+          : 'Un cycle plus long que d\'habitude arrive régulièrement (stress, fatigue, voyage, sport intense). ')
+        +'Estimations indicatives — ne convient pas comme méthode de contraception.</div></div>';
+    } else {
+      h+='<div class="card predict"><div style="font-size:13.5px;line-height:1.6">'
+        +'<b style="color:var(--blush)">🌙 Prochaines règles</b> : autour du <b>'+fmtFrShort(pred.next)+'</b>'
+        +(pred.inDays>0?' (dans '+pred.inDays+' jour'+(pred.inDays>1?'s':'')+')':' (aujourd\'hui)')
+        +' · ovulation estimée vers le '+fmtFrShort(pred.ovu)+'.'
+        +'</div><div style="font-size:11px;color:var(--muted);margin-top:5px">'
+        +(pred.reliable?"":"Estimation encore approximative (moins de 3 cycles enregistrés). ")
+        +'Estimations indicatives — ne convient pas comme méthode de contraception.</div></div>';
+    }
   }
 
   if(n===0){
@@ -1019,6 +1147,64 @@ function cycleLenChart(cycle){
     +'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Chaque barre = un cycle (du 1er jour des règles au 1er jour des suivantes). Les barres grises (durée atypique, souvent des données manquantes) sont exclues de la moyenne, en pointillés verts.</div>';
 }
 
+function experimentsCard(){
+  const exps=state.config.experiments||[];
+  const factors=enabledParams().filter(p=>paramKind(p)==="factor"&&(p.type==="bool"||p.type==="flow"));
+  const outcomes=enabledParams().filter(p=>paramKind(p)==="outcome"&&(p.type==="emoji5"||p.type==="scale"||p.type==="number"));
+  let h='<div class="stitle">Mes expériences</div>';
+  h+='<div class="card"><div style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:10px">'
+    +'Teste une hypothèse précise : choisis une action et l\'indicateur à observer, puis remplis normalement ton suivi. '
+    +'L\'app compare les jours avec et sans, et te donne un verdict.</div>';
+  if(!factors.length||!outcomes.length){
+    h+='<div style="font-size:13px;color:var(--muted)">Active au moins une action et un ressenti dans Réglages pour créer une expérience.</div></div>';
+    return h;
+  }
+  // Formulaire
+  h+='<div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">'
+    +'<select id="expfactor" style="flex:1;min-width:130px">'
+    +factors.map(p=>'<option value="'+p.id+'"'+(newExp.factor===p.id?" selected":"")+'>'+esc(p.short||p.label)+'</option>').join("")
+    +'</select>'
+    +'<span style="color:var(--muted);font-size:13px">agit sur</span>'
+    +'<select id="expoutcome" style="flex:1;min-width:130px">'
+    +outcomes.map(p=>'<option value="'+p.id+'"'+(newExp.outcome===p.id?" selected":"")+'>'+esc(p.short||p.label)+'</option>').join("")
+    +'</select>'
+    +'<select id="expdays" style="min-width:96px">'
+    +[14,21,30,60].map(d=>'<option value="'+d+'"'+(newExp.days===d?" selected":"")+'>'+d+' jours</option>').join("")
+    +'</select>'
+    +'<button data-act="addexp" style="background:var(--pine);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700">Lancer</button>'
+    +'</div></div>';
+  // Expériences en cours / terminées
+  exps.slice().reverse().forEach((exp,ri)=>{
+    const i=exps.length-1-ri;
+    const r=runExperiment(exp);
+    if(!r) return;
+    const pct=Math.round(Math.min(1,r.daysElapsed/exp.days)*100);
+    let body;
+    if(r.verdict){
+      const cols={positif:"var(--pine)",negatif:"var(--blush)",neutre:"var(--muted)"};
+      const words={positif:"Effet favorable",negatif:"Effet défavorable",neutre:"Pas d'effet notable"};
+      const maxV=r.b.type==="scale"?10:r.b.type==="emoji5"?5:Math.max(r.mWith,r.mWithout)||1;
+      const bar=(lbl,v,n,col)=>'<div style="margin-bottom:6px"><div class="row" style="justify-content:space-between;font-size:12px;margin-bottom:3px">'
+        +'<span>'+lbl+' <span style="color:var(--muted)">('+n+' j)</span></span><b>'+fmtVal(r.b,v)+'</b></div>'
+        +'<div class="bar"><div style="width:'+Math.round(v/maxV*100)+'%;background:'+col+'"></div></div></div>';
+      body='<div style="font-weight:800;color:'+cols[r.verdict]+';font-size:14px;margin:8px 0 8px">'+words[r.verdict]+'</div>'
+        +bar("Jours avec", r.mWith, r.nWith, cols[r.verdict])
+        +bar("Jours sans", r.mWithout, r.nWithout, "var(--sage)")
+        +'<div style="font-size:12px;color:var(--muted);margin-top:4px">Écart : '+(r.delta>0?"+":"")+r.delta.toFixed(1)+' sur '+esc(r.b.short||r.b.label)+'</div>';
+    } else {
+      body='<div style="font-size:12.5px;color:var(--muted);margin-top:8px">'
+        +'Il faut au moins 3 jours avec et 3 jours sans pour un verdict (actuellement '+r.nWith+' avec / '+r.nWithout+' sans).</div>';
+    }
+    h+='<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px">'
+      +'<div style="font-size:13.5px;font-weight:700">'+(r.a.icon||"")+' '+esc(r.a.short||r.a.label)+' → '+(r.b.icon||"")+' '+esc(r.b.short||r.b.label)+'</div>'
+      +'<button data-delexp="'+i+'" style="border:none;background:none;color:var(--muted);font-size:14px;padding:0 2px">✕</button></div>'
+      +'<div style="font-size:11.5px;color:var(--muted);margin-top:3px">'+(r.done?"Terminée":"En cours")+' · jour '+Math.min(r.daysElapsed,exp.days)+'/'+exp.days+' · '+r.filled+' jours renseignés</div>'
+      +'<div class="bar" style="margin-top:7px"><div style="width:'+pct+'%;background:var(--pine)"></div></div>'
+      +body+'</div>';
+  });
+  return h;
+}
+
 /* ----- vue Analyse ----- */
 function viewAnalysis(){
   const n=Object.keys(state.entries).length;
@@ -1037,26 +1223,56 @@ function viewAnalysis(){
       '<button class="chip pine '+(analysisRange===o[0]?"on":"")+'" data-range="'+o[0]+'">'+o[1]+'</button>').join("")
     +'</div>';
   h+=scoreCard();
-  h+='<div class="stitle">Constats — corrélations détectées</div>';
+  h+='<div class="stitle">Constats — ce qui influence ta forme</div>';
   if(cors.length===0)
-    h+='<div class="card"><div style="font-size:13.5px;color:var(--muted)">Aucune corrélation marquée pour l\'instant (|r| ≥ 0,30 avec au moins 8 jours communs). Continue à remplir régulièrement : plus il y a de données, plus les liens se révèlent.</div></div>';
+    h+='<div class="card"><div style="font-size:13.5px;color:var(--muted)">Aucun lien marqué pour l\'instant. Il faut au moins 15 jours de données communes, et pour une action (sport, alcool…) au moins 4 jours avec et 4 jours sans. Continue à remplir régulièrement.</div></div>';
   cors.forEach(c=>{
-    const neg=c.r<0;
-    const dirA=c.a.type==="bool"?"OUI":"▲";
-    const dirB=(c.b.type==="bool")?(neg?"NON":"OUI"):(neg?"▼":"▲");
-    const colB=neg?"var(--blush)":"var(--pine)";
-    h+='<div class="card constat'+(neg?" neg":"")+'">'
+    const neg=c.delta!==undefined ? c.delta<0 : c.r<0;
+    const good=c.b.neg?neg:!neg;   // « moins de stress » est une bonne nouvelle
+    const colB=good?"var(--pine)":"var(--blush)";
+    const dirA=(c.a.type==="bool")?"OUI":"▲";
+    const dirB=neg?"▼":"▲";
+    h+='<div class="card constat'+(good?"":" neg")+'">'
       +'<div class="cor-row">'
       +'<span class="cor-chip">'+(c.a.icon||"▪")+' '+esc(c.a.short||c.a.label)+' <b class="dir" style="color:var(--muted)">'+dirA+'</b></span>'
-      +'<span class="cor-link">➜<small>'+(c.lag===1?"lendemain":"même jour")+'</small></span>'
+      +'<span class="cor-link">➜<small>'+lagLabel(c.lag).replace("le ","").replace("une ","")+'</small></span>'
       +'<span class="cor-chip">'+(c.b.icon||"▪")+' '+esc(c.b.short||c.b.label)+' <b class="dir" style="color:'+colB+'">'+dirB+'</b></span>'
       +(c.sig?'':'<span style="background:var(--ochre-soft);color:#9a7328;border:1px solid rgba(201,155,79,.35);border-radius:999px;padding:4px 9px;font-size:10.5px;font-weight:700">⏳ à confirmer</span>')
+      +'<button data-dismiss="'+esc(dismissKey(c))+'" title="Masquer ce constat" style="margin-left:auto;border:none;background:none;color:var(--muted);font-size:15px;padding:2px 4px;line-height:1">✕</button>'
       +'</div>'
-      +'<div style="font-size:12.5px;color:var(--muted);line-height:1.5">'+correlationSentence(c)+'</div>'
-      +'<div class="cor-meter"><div style="width:'+Math.round(Math.abs(c.r)*100)+'%;height:100%;background:'+colB+'"></div></div>'
-      +'<div class="meta" style="margin-top:4px">Force : '+strengthWord(c.r)+' (r = '+c.r.toFixed(2)+') · '+c.n+' jours de données'+(c.sig?'':' · échantillon encore limité, le lien peut être dû au hasard')+'</div>'
+      +'<div style="font-size:13px;line-height:1.5;color:var(--ink)">'+correlationSentence(c)+'</div>';
+    // Comparaison "jours avec / jours sans" pour les actions oui-non
+    if(c.delta!==undefined){
+      const maxV=c.b.type==="scale"?10:c.b.type==="emoji5"?5:Math.max(c.mWith,c.mWithout)||1;
+      const bar=(lbl,v,n,col)=>'<div style="margin-bottom:6px">'
+        +'<div class="row" style="justify-content:space-between;font-size:12px;margin-bottom:3px">'
+        +'<span>'+lbl+' <span style="color:var(--muted)">('+n+' j)</span></span>'
+        +'<b>'+fmtVal(c.b,v)+'</b></div>'
+        +'<div class="bar"><div style="width:'+Math.round(v/maxV*100)+'%;background:'+col+'"></div></div></div>';
+      h+='<div style="margin-top:10px">'
+        +bar("Jours <b>avec</b> "+esc(c.a.short||c.a.label), c.mWith, c.nWith, colB)
+        +bar("Jours <b>sans</b>", c.mWithout, c.nWithout, "var(--sage)")
+        +'<div style="font-size:12px;color:'+colB+';font-weight:700;margin-top:2px">Écart : '+(c.delta>0?"+":"")+c.delta.toFixed(1)+'</div>'
+        +'</div>';
+    } else {
+      h+='<div class="cor-meter"><div style="width:'+Math.round(Math.abs(c.r)*100)+'%;height:100%;background:'+colB+'"></div></div>';
+    }
+    h+='<div class="meta" style="margin-top:6px">Lien '+strengthWord(c.r)+' · '+c.n+' jours analysés'+(c.sig?'':' · échantillon encore limité, ce lien peut être dû au hasard')+'</div>'
       +'</div>';
   });
+  // Constats masqués
+  const hid=cors.hidden||[];
+  if(hid.length){
+    h+='<button class="ghostbtn" data-act="toggledismissed" style="margin-bottom:12px">'
+      +(showDismissed?"▲ Masquer":"▼ Voir")+' les '+hid.length+' constat'+(hid.length>1?"s":"")+' que tu as écarté'+(hid.length>1?"s":"")+'</button>';
+    if(showDismissed) hid.forEach(c=>{
+      h+='<div class="card" style="opacity:.6;padding:12px"><div class="row" style="justify-content:space-between;gap:8px">'
+        +'<span style="font-size:12.5px">'+(c.a.icon||"")+' '+esc(c.a.short||c.a.label)+' ➜ '+(c.b.icon||"")+' '+esc(c.b.short||c.b.label)+' <span style="color:var(--muted)">('+lagLabel(c.lag)+')</span></span>'
+        +'<button data-restore="'+esc(dismissKey(c))+'" style="border:none;background:none;color:var(--pine);font-size:12px;font-weight:700">rétablir</button>'
+        +'</div></div>';
+    });
+  }
+  h+=experimentsCard();
 
   h+=bilanMensuelCard();
   h+=weekdayCard();
@@ -1105,16 +1321,24 @@ function viewAnalysis(){
 function viewSettings(){
   const n=Object.keys(state.entries).length;
   const demoLocked = n>0 && !state.config.isDemo;
-  let h='<div class="stitle">Paramètres suivis</div><div class="card">';
+  let h='<div class="stitle">Paramètres suivis</div><div class="card">'
+    +'<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">'
+    +'Chaque paramètre est soit une <b>action</b> (ce que tu fais : sport, alcool, sieste…), soit un <b>ressenti</b> '
+    +'(ce que tu observes : énergie, humeur, douleur…). L\'analyse cherche uniquement l\'effet des actions sur les ressentis.</div>';
   allParams().forEach(p=>{
     const on=!!state.config.enabled[p.id];
-    h+='<div class="settingrow"><span>'+esc(p.label)+'</span>'
+    const k=paramKind(p);
+    h+='<div class="settingrow"><span style="flex:1">'+esc(p.label)+'</span>'
+      +'<select data-kind="'+p.id+'" style="font-size:11.5px;padding:5px 6px;border-radius:9px">'
+      +'<option value="factor"'+(k==="factor"?" selected":"")+'>Action</option>'
+      +'<option value="outcome"'+(k==="outcome"?" selected":"")+'>Ressenti</option></select>'
       +'<button class="toggle '+(on?"on":"")+'" data-toggle="'+p.id+'"><span></span></button></div>';
   });
   h+='<div style="margin-top:14px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Ajouter un paramètre personnalisé</div>'
     +'<div class="row" style="flex-wrap:wrap;gap:8px">'
     +'<input type="text" id="newparam" placeholder="Ex. Caféine, Écrans le soir…" style="flex:1;min-width:160px">'
     +'<select id="newparamtype"><option value="emoji5">Émoticônes (5 niveaux)</option><option value="scale">Échelle 1–10</option><option value="bool">Oui / Non</option><option value="number">Nombre</option></select>'
+    +'<select id="newparamkind"><option value="factor">C\'est une action</option><option value="outcome">C\'est un ressenti</option></select>'
     +'<button data-act="addparam" style="background:var(--pine);color:#fff;border:none;border-radius:11px;padding:9px 16px;font-size:13px;font-weight:700">Ajouter</button>'
     +'</div></div></div>';
 
@@ -1200,6 +1424,23 @@ function bindEvents(){
   });
   document.querySelectorAll("[data-wday]").forEach(b=>b.onclick=()=>{ weekdayParam=b.dataset.wday; render(); });
   document.querySelectorAll("[data-range]").forEach(b=>b.onclick=()=>{ analysisRange=Number(b.dataset.range); render(); });
+  document.querySelectorAll("[data-dismiss]").forEach(b=>b.onclick=()=>{
+    state.config.dismissed=(state.config.dismissed||[]).concat([b.dataset.dismiss]);
+    save(); render();
+  });
+  document.querySelectorAll("[data-restore]").forEach(b=>b.onclick=()=>{
+    state.config.dismissed=(state.config.dismissed||[]).filter(k=>k!==b.dataset.restore);
+    save(); render();
+  });
+  document.querySelectorAll("[data-delexp]").forEach(b=>b.onclick=()=>{
+    const i=Number(b.dataset.delexp);
+    state.config.experiments=(state.config.experiments||[]).filter((_,k)=>k!==i);
+    save(); render();
+  });
+  document.querySelectorAll("[data-kind]").forEach(s=>s.onchange=()=>{
+    state.config.paramKinds=Object.assign({},state.config.paramKinds||{},{[s.dataset.kind]:s.value});
+    save(); render();
+  });
   document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>{
     const id=b.dataset.toggle;
     state.config.enabled[id]=!state.config.enabled[id];
@@ -1221,6 +1462,16 @@ function bindEvents(){
         if(pe){ draft.values=Object.assign({},pe.values); draft.symptoms=(pe.symptoms||[]).slice(); render(); }
       }
       else if(act==="snoozebackup"){ state.config.exportSnooze=todayStr(); save(); render(); }
+      else if(act==="toggledismissed"){ showDismissed=!showDismissed; render(); }
+      else if(act==="addexp"){
+        const f=document.getElementById("expfactor").value;
+        const o=document.getElementById("expoutcome").value;
+        const days=Number(document.getElementById("expdays").value);
+        if(!f||!o) return;
+        state.config.experiments=(state.config.experiments||[]).concat([{factor:f,outcome:o,days:days,start:todayStr()}]);
+        newExp={factor:f,outcome:o,days:days};
+        save(); render();
+      }
       else if(act==="calprev"){ const [y,m]=calMonth.split("-").map(Number); const d=new Date(y,m-2,1); calMonth=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); render(); }
       else if(act==="calnext"){ const [y,m]=calMonth.split("-").map(Number); const d=new Date(y,m,1); calMonth=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); render(); }
       else if(act==="save"){
@@ -1233,9 +1484,10 @@ function bindEvents(){
       else if(act==="addparam"){
         const label=document.getElementById("newparam").value.trim();
         const type=document.getElementById("newparamtype").value;
+        const kind=document.getElementById("newparamkind").value;
         if(!label) return;
         const id="custom_"+label.toLowerCase().replace(/[^a-z0-9]+/g,"_").slice(0,24)+"_"+Date.now().toString(36).slice(-3);
-        const p={id,label,short:label,type};
+        const p={id,label,short:label,type,kind,icon:kind==="factor"?"▪":"◆"};
         if(type==="number"){p.min=0;p.max=50;p.step=1;}
         state.config.customParams=(state.config.customParams||[]).concat([p]);
         state.config.enabled[id]=true;
