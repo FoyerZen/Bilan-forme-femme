@@ -209,6 +209,8 @@ let calMonth = todayStr().slice(0,7); // "YYYY-MM"
 let weekdayParam = "stress";
 let analysisRange = 0; // 0 = tout, 30 ou 90 jours
 let showDismissed = false;
+let editingParam = null;   // id du paramètre en cours de renommage
+let deletingParam = null;  // id du paramètre en attente de confirmation de suppression
 let newExp = { factor:"", outcome:"", days:21 };
 
 /* ---------- persistance ---------- */
@@ -237,7 +239,24 @@ function fmtFrShort(s){ return new Date(s+"T12:00:00").toLocaleDateString("fr-FR
 function esc(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
 /* ---------- accès paramètres ---------- */
-function allParams(){ return DEFAULT_PARAMS.concat(state.config.customParams||[]); }
+function allParams(){
+  const labels=state.config.paramLabels||{};
+  const types=state.config.paramTypes||{};
+  return DEFAULT_PARAMS.concat(state.config.customParams||[]).map(p=>{
+    const nl=labels[p.id], nt=types[p.id];
+    if(!nl&&!nt) return p;
+    const q=Object.assign({},p);
+    if(nl){ q.label=nl; q.short=nl; }
+    if(nt&&nt!==p.type){
+      q.type=nt;
+      if(nt==="number"){ q.min=q.min!==undefined?q.min:0; q.max=q.max!==undefined?q.max:20; q.step=q.step||1; }
+      if(nt==="scale"){ delete q.emojis; delete q.labels; }
+      if(nt!=="scale") delete q.from;
+      if(nt!=="number"){ delete q.unit; }
+    }
+    return q;
+  });
+}
 function enabledParams(){ return allParams().filter(p=>state.config.enabled[p.id]); }
 function paramById(id){ return allParams().find(p=>p.id===id); }
 
@@ -590,16 +609,39 @@ function backupDue(){
   return !le || diffDays(le,t)>15;
 }
 
+/* Normalise n'importe quelle valeur sur 0..1 selon le type courant du paramètre,
+   pour que le score de forme reste juste même si on change le format d'une échelle. */
+function normVal(p,v){
+  if(p==null||v==null) return null;
+  if(p.type==="emoji5") return (v-1)/4;
+  if(p.type==="scale"){ const lo=(p.from!==undefined)?p.from:1; return (v-lo)/(10-lo); }
+  if(p.type==="bool") return v?1:0;
+  if(p.type==="flow") return (v-1)/3;
+  if(p.type==="number"){ const lo=p.min||0, hi=(p.max||10); return Math.max(0,Math.min(1,(v-lo)/(hi-lo))); }
+  return null;
+}
+/* Convertit une valeur d'un format vers un autre en conservant la position relative */
+function convertValue(v, fromP, toP){
+  const n=normVal(fromP,v);
+  if(n===null) return null;
+  if(toP.type==="emoji5") return Math.max(1,Math.min(5,Math.round(1+n*4)));
+  if(toP.type==="scale"){ const lo=(toP.from!==undefined)?toP.from:1; return Math.round(lo+n*(10-lo)); }
+  if(toP.type==="bool") return n>=0.5?1:0;
+  if(toP.type==="number"){ const lo=toP.min||0, hi=(toP.max||10); return Math.round(lo+n*(hi-lo)); }
+  return null;
+}
+
 function formeScore(e){
   if(!e||!e.values) return null;
-  const v=e.values, comps=[];
-  if(v.sommeil_q!=null) comps.push(v.sommeil_q/5);
-  if(v.energie!=null) comps.push(v.energie/5);
-  if(v.humeur!=null) comps.push(v.humeur/5);
-  if(v.stress!=null) comps.push((6-v.stress)/5);
-  if(v.douleur!=null) comps.push((10-v.douleur)/10);
+  const comps=[];
+  ["sommeil_q","energie","humeur","stress","douleur"].forEach(id=>{
+    const p=paramById(id); if(!p) return;
+    const n=normVal(p, e.values[id]);
+    if(n===null||isNaN(n)) return;
+    comps.push(p.neg ? 1-n : n);   // stress et douleur : plus c'est bas, mieux c'est
+  });
   if(comps.length<2) return null;
-  return Math.round(mean(comps)*100);
+  return Math.round(Math.max(0,Math.min(1,mean(comps)))*100);
 }
 
 /* ---------- données de démo ---------- */
@@ -1328,7 +1370,52 @@ function viewSettings(){
   allParams().forEach(p=>{
     const on=!!state.config.enabled[p.id];
     const k=paramKind(p);
+    const custom=(state.config.customParams||[]).some(c=>c.id===p.id);
+    const locked=(p.id==="regles"||p.id==="regles_flux"); // format figé : sert au calcul du cycle
+    // Suppression : deux options
+    if(deletingParam===p.id){
+      let used=0;
+      Object.values(state.entries).forEach(e=>{ if(e.values&&e.values[p.id]!==undefined) used++; });
+      h+='<div style="background:var(--blush-soft);border-radius:12px;padding:12px;margin:6px 0">'
+        +'<div style="font-size:12.5px;line-height:1.5;margin-bottom:10px"><b>'+esc(p.label)+'</b> — '
+        +(used?used+' saisie'+(used>1?'s':'')+' dans ton historique.':'aucune donnée enregistrée.')+'</div>'
+        +'<button data-stopparam="'+p.id+'" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--pine);background:var(--pine-soft);color:var(--pine);font-size:12.5px;font-weight:700;margin-bottom:7px">'
+        +'Arrêter le suivi — garder l\'historique</button>'
+        +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.4">Il disparaît de la saisie quotidienne, mais tes données passées restent dans le journal et les analyses.</div>'
+        +'<button data-delparam="'+p.id+'" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--blush);color:#fff;font-size:12.5px;font-weight:700;margin-bottom:7px">'
+        +'Tout supprimer définitivement</button>'
+        +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.4">Le paramètre et ses '+used+' saisie'+(used>1?'s':'')+' sont effacés. Irréversible.</div>'
+        +'<button data-act="canceldelparam" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--border);background:#FBFAF7;font-size:12.5px;font-weight:600">Annuler</button>'
+        +'</div>';
+      return;
+    }
+    // Modification : nom + format
+    if(editingParam===p.id){
+      let used=0;
+      Object.values(state.entries).forEach(e=>{ if(e.values&&e.values[p.id]!==undefined) used++; });
+      const TYPES=[["emoji5","Émoticônes (5 niveaux)"],["scale","Échelle chiffrée (0–10)"],["bool","Oui / Non"],["number","Nombre"]];
+      h+='<div style="background:var(--pine-soft);border-radius:12px;padding:12px;margin:6px 0">'
+        +'<div style="font-size:11.5px;font-weight:700;color:var(--pine);margin-bottom:6px">NOM</div>'
+        +'<input type="text" id="renameparam" value="'+esc(p.label)+'" style="width:100%;margin-bottom:12px">'
+        +'<div style="font-size:11.5px;font-weight:700;color:var(--pine);margin-bottom:6px">FORMAT DE SAISIE</div>';
+      if(locked){
+        h+='<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">Le format de ce paramètre ne peut pas être modifié : il sert au calcul automatique des phases de ton cycle.</div>'
+          +'<input type="hidden" id="retypeparam" value="'+p.type+'">';
+      } else {
+        h+='<select id="retypeparam" style="width:100%;margin-bottom:6px">'
+          +TYPES.map(t=>'<option value="'+t[0]+'"'+(p.type===t[0]?" selected":"")+'>'+t[1]+'</option>').join("")
+          +'</select>'
+          +(used?'<div style="font-size:11px;color:var(--muted);line-height:1.4;margin-bottom:12px">En changeant de format, tes '+used+' saisie'+(used>1?'s':'')+' sont converties automatiquement en gardant leur niveau relatif (ex. 4/5 devient 8/10).</div>'
+                :'<div style="margin-bottom:12px"></div>');
+      }
+      h+='<button data-renameparam="'+p.id+'" style="width:100%;padding:10px;border-radius:10px;border:none;background:var(--pine);color:#fff;font-size:12.5px;font-weight:700;margin-bottom:7px">Enregistrer</button>'
+        +'<button data-act="cancelrename" style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--border);background:#FBFAF7;font-size:12.5px;font-weight:600">Annuler</button>'
+        +'</div>';
+      return;
+    }
     h+='<div class="settingrow"><span style="flex:1">'+esc(p.label)+'</span>'
+      +'<button data-editparam="'+p.id+'" title="Modifier" style="border:none;background:none;font-size:13px;padding:2px 4px;color:var(--muted)">✏️</button>'
+      +(custom?'<button data-askdelparam="'+p.id+'" title="Supprimer" style="border:none;background:none;font-size:13px;padding:2px 4px;color:var(--muted)">🗑️</button>':'')
       +'<select data-kind="'+p.id+'" style="font-size:11.5px;padding:5px 6px;border-radius:9px">'
       +'<option value="factor"'+(k==="factor"?" selected":"")+'>Action</option>'
       +'<option value="outcome"'+(k==="outcome"?" selected":"")+'>Ressenti</option></select>'
@@ -1437,6 +1524,73 @@ function bindEvents(){
     state.config.experiments=(state.config.experiments||[]).filter((_,k)=>k!==i);
     save(); render();
   });
+  document.querySelectorAll("[data-editparam]").forEach(b=>b.onclick=()=>{
+    editingParam=b.dataset.editparam; deletingParam=null; render();
+  });
+  document.querySelectorAll("[data-askdelparam]").forEach(b=>b.onclick=()=>{
+    deletingParam=b.dataset.askdelparam; editingParam=null; render();
+  });
+  document.querySelectorAll("[data-renameparam]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.renameparam;
+    const oldP=paramById(id);
+    const inp=document.getElementById("renameparam");
+    const sel=document.getElementById("retypeparam");
+    const v=inp?inp.value.trim():"";
+    const newType=sel?sel.value:(oldP?oldP.type:null);
+    if(v){
+      state.config.paramLabels=Object.assign({},state.config.paramLabels||{},{[id]:v});
+      const cp=(state.config.customParams||[]).find(c=>c.id===id);
+      if(cp){ cp.label=v; cp.short=v; }
+    }
+    if(oldP && newType && newType!==oldP.type){
+      state.config.paramTypes=Object.assign({},state.config.paramTypes||{},{[id]:newType});
+      const newP=paramById(id);   // définition avec le nouveau type appliqué
+      // conversion des saisies existantes en gardant le niveau relatif
+      Object.keys(state.entries).forEach(d=>{
+        const e=state.entries[d];
+        if(!e.values||e.values[id]===undefined||e.values[id]===null) return;
+        const conv=convertValue(Number(e.values[id]), oldP, newP);
+        if(conv===null) delete e.values[id]; else e.values[id]=conv;
+      });
+      const cp=(state.config.customParams||[]).find(c=>c.id===id);
+      if(cp){
+        cp.type=newType;
+        if(newType==="number"){ cp.min=cp.min||0; cp.max=cp.max||20; cp.step=cp.step||1; }
+      }
+    }
+    editingParam=null; save(); render();
+  });
+  document.querySelectorAll("[data-stopparam]").forEach(b=>b.onclick=()=>{
+    // Arrêter le suivi : le paramètre disparaît de la saisie, l'historique est conservé
+    state.config.enabled[b.dataset.stopparam]=false;
+    if(draft.values) delete draft.values[b.dataset.stopparam];
+    deletingParam=null; save(); render();
+  });
+  document.querySelectorAll("[data-delparam]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.delparam;
+    // 1. retirer la définition et ses réglages
+    state.config.customParams=(state.config.customParams||[]).filter(c=>c.id!==id);
+    delete state.config.enabled[id];
+    if(state.config.paramKinds) delete state.config.paramKinds[id];
+    if(state.config.paramLabels) delete state.config.paramLabels[id];
+    if(state.config.paramTypes) delete state.config.paramTypes[id];
+    // 2. effacer les saisies correspondantes
+    Object.keys(state.entries).forEach(d=>{
+      const e=state.entries[d];
+      if(e.values && e.values[id]!==undefined){
+        delete e.values[id];
+        const vide=Object.keys(e.values).length===0 && !(e.symptoms||[]).length && !(e.notes||"").trim();
+        if(vide) delete state.entries[d];
+      }
+    });
+    // 3. nettoyer les références (constats masqués, expériences, graphiques)
+    state.config.dismissed=(state.config.dismissed||[]).filter(k=>k.split("|")[0]!==id && k.split("|")[1]!==id);
+    state.config.experiments=(state.config.experiments||[]).filter(x=>x.factor!==id && x.outcome!==id);
+    chartParams=chartParams.filter(x=>x!==id);
+    if(weekdayParam===id) weekdayParam="stress";
+    if(draft.values && draft.values[id]!==undefined) delete draft.values[id];
+    deletingParam=null; save(); render();
+  });
   document.querySelectorAll("[data-kind]").forEach(s=>s.onchange=()=>{
     state.config.paramKinds=Object.assign({},state.config.paramKinds||{},{[s.dataset.kind]:s.value});
     save(); render();
@@ -1463,6 +1617,8 @@ function bindEvents(){
       }
       else if(act==="snoozebackup"){ state.config.exportSnooze=todayStr(); save(); render(); }
       else if(act==="toggledismissed"){ showDismissed=!showDismissed; render(); }
+      else if(act==="cancelrename"){ editingParam=null; render(); }
+      else if(act==="canceldelparam"){ deletingParam=null; render(); }
       else if(act==="addexp"){
         const f=document.getElementById("expfactor").value;
         const o=document.getElementById("expoutcome").value;

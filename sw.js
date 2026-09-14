@@ -1,4 +1,4 @@
-const CACHE_VERSION = "bilanforme-v6";
+const CACHE_VERSION = "bilanforme-v8";
 const APP_FILES = ["./","./index.html","./manifest.json","./icon-192.png","./icon-512.png"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE_VERSION).then(c => c.addAll(APP_FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE_VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
